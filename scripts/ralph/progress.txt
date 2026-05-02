@@ -39,3 +39,18 @@
   - `Bundle.module` is auto-generated for SwiftPM targets with resources - provides `url(forResource:withExtension:)` method
   - Test resources are bundled in a separate `.bundle` within the test xctest package
 ---
+
+## 2026-05-02 21:25 - US-003
+- **Implemented:** Implement low-latency Core Audio playback engine
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/AudioEngine.swift` - New AudioEngine class with AVAudioEngine + 8 concurrent AVAudioPlayerNodes
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 13 new tests for AudioEngine
+- **Learnings for future iterations:**
+  - AVAudioEngine requires format matching between player nodes and buffers - use `inputFormat(forBus: 0)` on the mixer node
+  - WAV files may have different formats (mono/stereo, sample rates) - implement format conversion using AVAudioConverter
+  - Multiple AVAudioPlayerNodes enable concurrent/overlapping playback without cutting off sounds
+  - Round-robin player node selection with thread-safe locking for concurrent keystrokes
+  - Pre-load all buffers at profile load time to achieve <20ms trigger-to-output latency (no file I/O on play call)
+  - `.interrupts` scheduling option ensures clean buffer replacement when reusing the same player node
+  - Mute state short-circuits playback before scheduling - efficient and silent
+---
