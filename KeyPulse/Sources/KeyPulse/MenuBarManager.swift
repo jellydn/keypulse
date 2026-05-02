@@ -24,6 +24,7 @@ final class MenuBarManager {
     var onMuteChanged: ((Bool) -> Void)?
     var onPitchVariationChanged: ((Bool) -> Void)?
     var onLaunchAtLoginChanged: ((Bool) -> Void)?
+    var onDebugWindowRequested: (() -> Void)?
     var onQuit: (() -> Void)?
 
     /// Creates a new menu bar manager.
@@ -172,6 +173,18 @@ final class MenuBarManager {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Debug Window
+        let debugMenuItem = NSMenuItem(
+            title: "Debug Window",
+            action: #selector(showDebugWindow),
+            keyEquivalent: "d"
+        )
+        debugMenuItem.target = self
+        debugMenuItem.keyEquivalentModifierMask = [.command, .option]
+        menu.addItem(debugMenuItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Quit
         let quitItem = NSMenuItem(
             title: "Quit KeyPulse",
@@ -270,6 +283,10 @@ final class MenuBarManager {
         let newState = !currentState
         launchAtLoginMenuItem?.state = newState ? .on : .off
         onLaunchAtLoginChanged?(newState)
+    }
+
+    @objc private func showDebugWindow() {
+        onDebugWindowRequested?()
     }
 
     @objc private func quitApp() {

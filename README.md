@@ -50,9 +50,23 @@ just bundle
 
 ### Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| — | Click menu bar icon for settings |
+| Shortcut    | Action                           |
+| ----------- | -------------------------------- |
+| `Cmd+Opt+D` | Toggle Debug Window              |
+| —           | Click menu bar icon for settings |
+
+### Debug Window
+
+The Debug Window provides real-time diagnostics for testing and verification:
+
+- **Keystroke Stats**: Total count, last key code, modifier detection
+- **Profile & Sample**: Active profile, last sample played
+- **Latency Metrics**: Average/min/max with PASS/FAIL indicator (<20ms target)
+- **Modifier Flags**: Live state of Shift, Command, Option, Control
+- **Settings**: Volume, mute state, pitch variation
+- **Actions**: Test Sound, Test All Profiles, Reset Stats, Copy Diagnostics
+
+![Debug Window](docs/debug-window-screenshot.png)
 
 ## 🛠️ Development
 
@@ -119,6 +133,7 @@ This repo uses [Ralph](https://github.com/jellydn/ralph) — an autonomous agent
 ## 🧪 TestFlight Distribution
 
 See [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md) for detailed instructions on:
+
 - Code signing setup
 - Building release archives
 - Uploading to App Store Connect
@@ -132,14 +147,14 @@ Quick build:
 
 ## 📋 Roadmap
 
-| Feature | Status |
-|---------|--------|
-| MVP with 3 sound profiles | ✅ Done |
-| Launch at login | ✅ Done |
-| Pitch randomization | ✅ Done |
-| Per-app profiles | 🚧 Planned |
-| Custom sound packs | 🚧 Planned |
-| Windows port | 🔮 Future |
+| Feature                   | Status     |
+| ------------------------- | ---------- |
+| MVP with 3 sound profiles | ✅ Done    |
+| Launch at login           | ✅ Done    |
+| Pitch randomization       | ✅ Done    |
+| Per-app profiles          | 🚧 Planned |
+| Custom sound packs        | 🚧 Planned |
+| Windows port              | 🔮 Future  |
 
 ## ⚠️ Known Issues
 

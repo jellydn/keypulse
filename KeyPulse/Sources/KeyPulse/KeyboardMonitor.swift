@@ -40,6 +40,9 @@ final class KeyboardMonitor {
     /// Used for debouncing flagsChanged events so each modifier press fires once.
     private var lastModifierFlags: CGEventFlags = []
 
+    /// Callback for modifier flag changes. Called whenever shift/cmd/option/ctrl state changes.
+    var onFlagsChanged: ((_ flags: CGEventFlags) -> Void)?
+
     /// Creates a new keyboard monitor.
     /// Note: Call `start()` to begin monitoring after checking/requesting accessibility permission.
     init() {}
@@ -203,9 +206,16 @@ final class KeyboardMonitor {
         // This is outside the normal key code range (0-127)
         let modifierKeyCode: UInt16 = 0xFF
 
-        // Call the handler on the main thread
+        // Call the handlers on the main thread
         DispatchQueue.main.async { [weak self] in
             self?.onKeyDown?(modifierKeyCode)
+            self?.onFlagsChanged?(currentFlags)
         }
+    }
+
+    /// Returns the current modifier flags state.
+    /// Useful for getting the initial state when the debug window opens.
+    var currentModifierFlags: CGEventFlags {
+        return lastModifierFlags
     }
 }

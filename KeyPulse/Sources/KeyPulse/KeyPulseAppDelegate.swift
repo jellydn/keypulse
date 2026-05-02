@@ -4,12 +4,14 @@ import Carbon
 class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     private var controller: KeyPulseController?
     private var menuBarManager: MenuBarManager?
+    private var debugWindowController: DebugWindowController?
     private let settingsStore = SettingsStore.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupController()
         applySettingsToController()
         setupMenuBar()
+        setupDebugWindow()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -67,6 +69,21 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
             print("KeyPulse: Quit requested")
             self?.saveSettings()
         }
+
+        menuBarManager?.onDebugWindowRequested = { [weak self] in
+            print("KeyPulse: Debug window requested")
+            self?.debugWindowController?.toggleWindow()
+        }
+    }
+
+    private func setupDebugWindow() {
+        guard let controller = controller else {
+            print("KeyPulse: Cannot setup debug window without controller")
+            return
+        }
+
+        debugWindowController = DebugWindowController(controller: controller)
+        print("KeyPulse: Debug window controller initialized (Cmd+Opt+D to show)")
     }
 
     private func setupController() {

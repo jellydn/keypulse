@@ -33,6 +33,38 @@
 - **Latency Stats**: AudioEngine provides `averageLatency`, `maxLatency`, `minLatency`, `latencyReport()` for performance monitoring
 - **Pre-loaded buffers**: Use `AVAudioPCMBuffer` loaded at startup to eliminate file I/O during playback (<20ms target)
 - **Round-robin players**: Multiple `AVAudioPlayerNode` instances enable concurrent playback without cutting off sounds
+- **Debug Window**: SwiftUI-based floating window (360x420) with NSHostingController, updates throttled to 10Hz via Combine `.throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)`
+- **Diagnostics**: KeyPulseController is ObservableObject with @Published diagnosticsData for real-time UI binding
+- **Test Sound**: Controller.testPlay() and testAllProfiles() methods for Debug Window verification
+- **Modifier Flags**: CGEventFlags.contains(.maskShift/.maskCommand/.maskAlternate/.maskControl) for live modifier state display
+
+## 2026-05-04 10:30 - US-013
+- **Implemented:** Add Debug Window for live verification of keystrokes, samples, and latency
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/DiagnosticsData.swift` - New: Diagnostics struct with all debug fields and formatted output
+  - `KeyPulse/Sources/KeyPulse/KeyPulseController.swift` - Added: diagnostics tracking, @Published diagnosticsData, testPlay(), testAllProfiles(), resetStats(), diagnostics(), keyCodeDisplayName(), updateDiagnosticsData()
+  - `KeyPulse/Sources/KeyPulse/KeyboardMonitor.swift` - Added: onFlagsChanged callback, currentModifierFlags property for live modifier state
+  - `KeyPulse/Sources/KeyPulse/DebugWindowController.swift` - New: DebugWindowController with SwiftUI-based floating window, 360x420 size, Combine subscription with 100ms throttle
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - Added: Debug Window menu item with Cmd+Opt+D shortcut
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Added: DebugWindowController initialization and menu callback
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added: 9 new unit tests for diagnostics (testDiagnosticsDataInitialization, testDiagnosticsDataFormattedOutput, testKeyPulseControllerDiagnostics, testKeyPulseControllerResetStats, testKeyPulseControllerTestPlayIncrementsSampleIndex, testKeyPulseControllerTestPlayWhenMuted, testKeyPulseControllerProfileChangeUpdatesDiagnostics, testDiagnosticsDataEquatable, testDiagnosticsDataLatencyPassFail)
+  - `README.md` - Added: Debug Window documentation with keyboard shortcut
+  - `scripts/ralph/prd.json` - Marked US-013 as passing
+- **Learnings for future iterations:**
+  - SwiftUI inside NSHostingController is perfect for debug windows - declarative UI with AppKit integration
+  - Combine `.throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)` limits updates to 10Hz max as required
+  - NSWindow `setFrameAutosaveName` automatically persists window position across launches
+  - `.floating` window level keeps debug window above other apps without interfering
+  - KeyPulseController as ObservableObject with @Published properties enables automatic UI updates
+  - CGEventFlags modifier masks: `.maskShift`, `.maskCommand`, `.maskAlternate`, `.maskControl`
+  - Debug window doesn't auto-open on launch (opt-in only) as per requirements
+  - Modifier key detection: 0xFF sentinel value for flagsChanged events, distinct from regular key codes
+  - `SoundAssets.sampleURL(for: index:)` used to get filename for display
+  - DiagnosticsData.formattedDiagnostics() generates plain-text report for clipboard copying
+  - Window delegate's `windowShouldClose` returns false to hide instead of close (preserve state)
+  - All 69 tests pass (60 existing + 9 new diagnostics tests)
+  - Build succeeds with no warnings
+---
 
 ## 2026-05-04 10:15 - US-012
 - **Implemented:** Configure signing, notarization, and TestFlight build (documentation completion)

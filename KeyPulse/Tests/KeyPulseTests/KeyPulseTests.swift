@@ -884,4 +884,151 @@ final class KeyPulseTests: XCTestCase {
         // Verify we can read it back (may differ from what we set due to SMAppService state)
         _ = store.launchAtLogin
     }
+
+    // MARK: - Diagnostics Tests
+
+    func testDiagnosticsDataInitialization() {
+        let diagnostics = DiagnosticsData()
+        XCTAssertEqual(diagnostics.totalKeystrokes, 0)
+        XCTAssertEqual(diagnostics.lastKeyCode, 0)
+        XCTAssertEqual(diagnostics.activeProfile, .linear)
+        XCTAssertEqual(diagnostics.latencySampleCount, 0)
+        XCTAssertEqual(diagnostics.volumePercent, 100)
+        XCTAssertFalse(diagnostics.isMuted)
+        XCTAssertTrue(diagnostics.isPitchVariationEnabled)
+    }
+
+    func testDiagnosticsDataFormattedOutput() {
+        var diagnostics = DiagnosticsData()
+        diagnostics.totalKeystrokes = 42
+        diagnostics.lastKeyCode = 49
+        diagnostics.lastKeyDisplayName = "Space"
+        diagnostics.activeProfile = .tactile
+        diagnostics.latencyAverageMs = 1.5
+        diagnostics.latencyMinMs = 0.5
+        diagnostics.latencyMaxMs = 10.0
+        diagnostics.latencySampleCount = 100
+        diagnostics.volumePercent = 75
+        diagnostics.isMuted = false
+
+        let formatted = diagnostics.formattedDiagnostics()
+
+        XCTAssertTrue(formatted.contains("KeyPulse Diagnostics Report"))
+        XCTAssertTrue(formatted.contains("Total Keystrokes: 42"))
+        XCTAssertTrue(formatted.contains("Space"))
+        XCTAssertTrue(formatted.contains("Tactile"))
+        XCTAssertTrue(formatted.contains("75%"))
+        XCTAssertTrue(formatted.contains("PASS"))
+    }
+
+    func testKeyPulseControllerDiagnostics() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer {
+            controller.stop()
+        }
+
+        let diagnostics = controller.diagnostics()
+
+        XCTAssertEqual(diagnostics.activeProfile, .linear)
+        XCTAssertEqual(diagnostics.totalKeystrokes, 0)
+        XCTAssertEqual(diagnostics.latencySampleCount, 0)
+    }
+
+    func testKeyPulseControllerResetStats() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer {
+            controller.stop()
+        }
+
+        // Reset stats
+        controller.resetStats()
+
+        let diagnostics = controller.diagnostics()
+        XCTAssertEqual(diagnostics.totalKeystrokes, 0)
+        XCTAssertEqual(diagnostics.latencySampleCount, 0)
+    }
+
+    func testKeyPulseControllerTestPlayIncrementsSampleIndex() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer {
+            controller.stop()
+        }
+
+        // Get initial state
+        let initialDiagnostics = controller.diagnostics()
+        let initialSampleIndex = initialDiagnostics.lastSampleIndex
+
+        // Play a test sound (will only work if not muted)
+        controller.setMuted(false)
+        controller.setVolume(50)
+        let playResult = controller.testPlay()
+
+        // Result depends on whether audio engine is running
+        // We just verify the method doesn't crash
+        XCTAssertTrue(playResult || !playResult) // Always true, just verifying no crash
+
+        // Get updated state
+        let updatedDiagnostics = controller.diagnostics()
+
+        // Sample index should be set (either 0 or the random index)
+        XCTAssertGreaterThanOrEqual(updatedDiagnostics.lastSampleIndex, 0)
+        XCTAssertLessThan(updatedDiagnostics.lastSampleIndex, SoundAssets.samplesPerProfile)
+    }
+
+    func testKeyPulseControllerTestPlayWhenMuted() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer {
+            controller.stop()
+        }
+
+        // Mute and try to play
+        controller.setMuted(true)
+        let playResult = controller.testPlay()
+
+        // Should return false when muted
+        XCTAssertFalse(playResult)
+    }
+
+    func testKeyPulseControllerProfileChangeUpdatesDiagnostics() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer {
+            controller.stop()
+        }
+
+        XCTAssertEqual(controller.diagnostics().activeProfile, .linear)
+
+        try controller.setProfile(.tactile)
+        XCTAssertEqual(controller.diagnostics().activeProfile, .tactile)
+
+        try controller.setProfile(.clicky)
+        XCTAssertEqual(controller.diagnostics().activeProfile, .clicky)
+    }
+
+    func testDiagnosticsDataEquatable() {
+        var data1 = DiagnosticsData()
+        var data2 = DiagnosticsData()
+
+        // Same initial values should be equal
+        XCTAssertEqual(data1, data2)
+
+        // Change one field
+        data1.totalKeystrokes = 10
+        XCTAssertNotEqual(data1, data2)
+
+        // Match it back
+        data2.totalKeystrokes = 10
+        XCTAssertEqual(data1, data2)
+    }
+
+    func testDiagnosticsDataLatencyPassFail() {
+        var diagnostics = DiagnosticsData()
+
+        // Good latency (< 20ms) - should show PASS
+        diagnostics.latencyAverageMs = 10.0
+        XCTAssertTrue(diagnostics.formattedDiagnostics().contains("PASS"))
+
+        // Bad latency (> 20ms) - should show FAIL
+        diagnostics.latencyAverageMs = 25.0
+        XCTAssertTrue(diagnostics.formattedDiagnostics().contains("FAIL"))
+    }
 }

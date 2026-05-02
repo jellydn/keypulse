@@ -228,8 +228,8 @@
         "Tests pass"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": "Purpose: gives a single visible surface to verify US-002 (samples differ per profile - audible via Test Sound), US-003 (latency stays <20ms - shown live), US-005 (modifier keys do trigger sound - flag indicators light up), US-007/US-009/US-010 (volume/mute/pitch state mirrored). Keep UI minimal - SwiftUI inside `NSHostingView` is fine, or a plain AppKit window with NSTextFields and NSButtons. Must remain LSUIElement (no Dock icon)."
+      "passes": true,
+      "notes": "Debug Window implemented with SwiftUI inside NSHostingView. Features: ~360x420 floating window, live keystroke counter, key code display with modifier detection, active profile/sample info, latency metrics (avg/min/max/sample count), live modifier flags (shift/cmd/option/ctrl), settings display (volume/muted/pitch/enabled), profile segmented control, Test Sound button, Test All Profiles button, Reset Stats button, Copy Diagnostics button. Menu item with Cmd+Opt+D shortcut. KeyPulseController.diagnostics() returns DiagnosticsData struct. Combine @Published with throttle(100ms) for real-time updates without exceeding 10Hz. Window frame persisted via NSWindow frame autosave. 9 new unit tests added. README.md updated with Debug Window documentation. All 69 tests pass."
     }
   ]
 }
