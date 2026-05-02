@@ -29,6 +29,9 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
 
         menuBarManager = MenuBarManager(controller: controller)
 
+        // Sync initial launch at login state
+        menuBarManager?.updateLaunchAtLoginState(settingsStore.launchAtLogin)
+
         // Set up callbacks for menu actions with settings persistence
         menuBarManager?.onEnabledChanged = { [weak self] enabled in
             print("KeyPulse: Enabled state changed to \(enabled)")
@@ -53,6 +56,11 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
         menuBarManager?.onPitchVariationChanged = { [weak self] enabled in
             print("KeyPulse: Pitch variation changed to \(enabled)")
             self?.settingsStore.pitchRandomization = enabled
+        }
+
+        menuBarManager?.onLaunchAtLoginChanged = { [weak self] enabled in
+            print("KeyPulse: Launch at login changed to \(enabled)")
+            self?.settingsStore.launchAtLogin = enabled
         }
 
         menuBarManager?.onQuit = { [weak self] in

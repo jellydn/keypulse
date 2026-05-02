@@ -12,6 +12,7 @@ final class MenuBarManager {
     private var enabledMenuItem: NSMenuItem?
     private var muteMenuItem: NSMenuItem?
     private var pitchVariationMenuItem: NSMenuItem?
+    private var launchAtLoginMenuItem: NSMenuItem?
     private var volumeSliderItem: NSMenuItem?
     private var volumeSlider: NSSlider?
     private var profileMenuItems: [SoundProfile: NSMenuItem] = [:]
@@ -22,6 +23,7 @@ final class MenuBarManager {
     var onVolumeChanged: ((Int) -> Void)?
     var onMuteChanged: ((Bool) -> Void)?
     var onPitchVariationChanged: ((Bool) -> Void)?
+    var onLaunchAtLoginChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
     /// Creates a new menu bar manager.
@@ -159,6 +161,17 @@ final class MenuBarManager {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Launch at Login toggle
+        launchAtLoginMenuItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin),
+            keyEquivalent: ""
+        )
+        launchAtLoginMenuItem?.target = self
+        menu.addItem(launchAtLoginMenuItem!)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Quit
         let quitItem = NSMenuItem(
             title: "Quit KeyPulse",
@@ -193,6 +206,12 @@ final class MenuBarManager {
 
         // Update pitch variation state
         pitchVariationMenuItem?.state = controller.pitchRandomization ? .on : .off
+    }
+
+    /// Updates the Launch at Login menu item state.
+    /// - Parameter enabled: Whether launch at login is enabled.
+    func updateLaunchAtLoginState(_ enabled: Bool) {
+        launchAtLoginMenuItem?.state = enabled ? .on : .off
     }
 
     // MARK: - Actions
@@ -242,6 +261,15 @@ final class MenuBarManager {
         controller.setPitchRandomization(newState)
         pitchVariationMenuItem?.state = newState ? .on : .off
         onPitchVariationChanged?(newState)
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        // Get current state from UserDefaults/settings store via callback
+        // The actual state handling is done by the app delegate
+        let currentState = launchAtLoginMenuItem?.state == .on
+        let newState = !currentState
+        launchAtLoginMenuItem?.state = newState ? .on : .off
+        onLaunchAtLoginChanged?(newState)
     }
 
     @objc private func quitApp() {

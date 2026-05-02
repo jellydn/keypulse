@@ -21,8 +21,31 @@
 - SettingsStore uses UserDefaults with `object(forKey:)` check to distinguish unset values from valid values (e.g., volume=0 vs not set)
 - SettingsStore is a singleton for app-wide access; settings saved immediately on change via menu callbacks
 - Use `applicationWillTerminate` to ensure settings are saved before app quit
-- Pitch randomization uses AVAudioPlayerNode.rate property (±5% via Float.random(in: 0.95...1.05)) - simpler than AVAudioUnitTimePitch
-- SettingsStore stores Bool settings with same `object(forKey:)` pattern as other types to distinguish unset from false
+  - Pitch randomization uses AVAudioPlayerNode.rate property (±5% via Float.random(in: 0.95...1.05)) - simpler than AVAudioUnitTimePitch
+  - SettingsStore stores Bool settings with same `object(forKey:)` pattern as other types to distinguish unset from false
+  - SMAppService.mainApp provides launch-at-login on macOS 13+; status property is source of truth
+  - ServiceManagement framework required in Package.swift linkerSettings
+  - Launch at Login UI uses same pattern as other toggles; checkmark reflects SMAppService status
+  - App maintains LSUIElement = YES (no Dock icon) for set-and-forget experience
+
+## 2026-05-02 23:05 - US-011
+- **Implemented:** Add launch-at-login and background runtime polish
+- **Files changed:**
+  - `KeyPulse/Package.swift` - Added ServiceManagement framework to linkerSettings
+  - `KeyPulse/Sources/KeyPulse/SettingsStore.swift` - Added launchAtLogin property with SMAppService integration
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - Added Launch at Login menu item with callback
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Wired up launch at login callback and initial sync
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 3 unit tests for launch at login
+  - `scripts/ralph/prd.json` - Marked US-011 as passing
+- **Learnings for future iterations:**
+  - SMAppService.mainApp (macOS 13+) is the modern API for launch-at-login; replaces deprecated SMLoginItemSetEnabled
+  - SMAppService status is the source of truth - getter always reflects actual system state, not UserDefaults
+  - ServiceManagement framework must be added to Package.swift linkerSettings
+  - Unit tests for launch-at-login are limited because SMAppService requires app signing and system permissions
+  - The pattern for UserDefaults key naming follows `keypulse_{settingName}` convention
+  - LSUIElement = YES confirmed in Info.plist for menu bar only behavior
+  - 55 tests pass, build succeeds with no warnings
+---
 
 ## 2026-05-02 22:00 - US-007
 - **Implemented:** Add volume control and mute toggle

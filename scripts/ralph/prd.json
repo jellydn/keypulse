@@ -182,8 +182,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Launch at Login implemented using SMAppService.mainApp (macOS 13+). SettingsStore.launchAtLogin property syncs with system SMAppService status as source of truth. Menu bar UI includes toggle. LSUIElement remains YES. All 55 tests pass."
     },
     {
       "id": "US-012",

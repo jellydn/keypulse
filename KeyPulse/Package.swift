@@ -14,7 +14,8 @@ let package = Package(
                 .process("Resources")
             ],
             linkerSettings: [
-                .linkedFramework("Carbon")
+                .linkedFramework("Carbon"),
+                .linkedFramework("ServiceManagement")
             ]
         ),
         .testTarget(

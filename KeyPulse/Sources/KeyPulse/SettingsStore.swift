@@ -1,4 +1,5 @@
 import Foundation
+import ServiceManagement
 
 /// Persistent storage for user settings using UserDefaults.
 /// Handles saving and loading of profile, volume, mute state, and enabled state.
@@ -13,6 +14,7 @@ final class SettingsStore {
         static let isMuted = "keypulse_isMuted"
         static let isEnabled = "keypulse_isEnabled"
         static let pitchRandomization = "keypulse_pitchRandomization"
+        static let launchAtLogin = "keypulse_launchAtLogin"
     }
 
     /// Default values for settings.
@@ -22,6 +24,7 @@ final class SettingsStore {
         static let isMuted: Bool = false
         static let isEnabled: Bool = true
         static let pitchRandomization: Bool = true
+        static let launchAtLogin: Bool = false
     }
 
     /// The current sound profile.
@@ -90,6 +93,56 @@ final class SettingsStore {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: Keys.pitchRandomization)
+        }
+    }
+
+    /// Whether the app should launch at login.
+    /// This property syncs with SMAppService to reflect the actual system registration state.
+    var launchAtLogin: Bool {
+        get {
+            // First check the actual system state via SMAppService
+            let serviceStatus = SMAppService.mainApp.status
+            let isRegistered = (serviceStatus == .enabled)
+
+            // Check if key exists in UserDefaults
+            if UserDefaults.standard.object(forKey: Keys.launchAtLogin) == nil {
+                // If system says it's registered, update our stored value
+                if isRegistered {
+                    UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
+                }
+                return isRegistered
+            }
+
+            // Return the system state as the source of truth
+            return isRegistered
+        }
+        set {
+            // Sync with SMAppService
+            let service = SMAppService.mainApp
+
+            if newValue {
+                // Register for launch at login
+                if service.status != .enabled {
+                    do {
+                        try service.register()
+                        UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
+                    } catch {
+                        print("Failed to register for launch at login: \(error)")
+                        // Don't update UserDefaults if registration failed
+                    }
+                }
+            } else {
+                // Unregister from launch at login
+                if service.status == .enabled {
+                    do {
+                        try service.unregister()
+                        UserDefaults.standard.set(false, forKey: Keys.launchAtLogin)
+                    } catch {
+                        print("Failed to unregister from launch at login: \(error)")
+                        // Don't update UserDefaults if unregistration failed
+                    }
+                }
+            }
         }
     }
 
