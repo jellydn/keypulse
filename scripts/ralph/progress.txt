@@ -21,12 +21,35 @@
 - SettingsStore uses UserDefaults with `object(forKey:)` check to distinguish unset values from valid values (e.g., volume=0 vs not set)
 - SettingsStore is a singleton for app-wide access; settings saved immediately on change via menu callbacks
 - Use `applicationWillTerminate` to ensure settings are saved before app quit
-  - Pitch randomization uses AVAudioPlayerNode.rate property (±5% via Float.random(in: 0.95...1.05)) - simpler than AVAudioUnitTimePitch
-  - SettingsStore stores Bool settings with same `object(forKey:)` pattern as other types to distinguish unset from false
-  - SMAppService.mainApp provides launch-at-login on macOS 13+; status property is source of truth
-  - ServiceManagement framework required in Package.swift linkerSettings
-  - Launch at Login UI uses same pattern as other toggles; checkmark reflects SMAppService status
-  - App maintains LSUIElement = YES (no Dock icon) for set-and-forget experience
+- Pitch randomization uses AVAudioPlayerNode.rate property (±5% via Float.random(in: 0.95...1.05)) - simpler than AVAudioUnitTimePitch
+- SettingsStore stores Bool settings with same `object(forKey:)` pattern as other types to distinguish unset from false
+- SMAppService.mainApp provides launch-at-login on macOS 13+; status property is source of truth
+- ServiceManagement framework required in Package.swift linkerSettings
+- Launch at Login UI uses same pattern as other toggles; checkmark reflects SMAppService status
+- App maintains LSUIElement = YES (no Dock icon) for set-and-forget experience
+- **Sound Assets**: Procedurally generated CC0 WAV files, distinct per profile (Linear: 180Hz thock, Tactile: 280Hz bump, Clicky: 450Hz + 3.5kHz click)
+
+## 2026-05-02 23:15 - US-002
+- **Implemented:** Bundle WAV sound assets for 3 profiles (REVIEW FIX)
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/linear/*.wav` - 4 distinct linear switch sounds (60ms, 180Hz thock)
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/tactile/*.wav` - 4 distinct tactile switch sounds (70ms, 280Hz bump)
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/clicky/*.wav` - 4 distinct clicky switch sounds (80ms, 450Hz + 3.5kHz click)
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/CREDITS.md` - Full documentation with license (CC0), sources, and MD5 checksums
+  - `scripts/ralph/generate_real_sounds.py` - Procedural sound synthesis script
+  - `scripts/ralph/prd.json` - Marked US-002 as passing, updated notes
+- **Learnings for future iterations:**
+  - All 12 WAV files now have unique MD5 hashes (verified via `md5` command)
+  - Procedural synthesis approach: additive synthesis with sine waves + harmonics + filtered noise
+  - Profile differentiation via base frequency and envelope characteristics
+  - Linear: Low freq (180Hz), fast decay, minimal noise - simulates smooth switches like Cherry MX Red
+  - Tactile: Mid freq (280Hz), bump envelope at 30% mark - simulates bump switches like Cherry MX Brown
+  - Clicky: High freq (450Hz) + 3.5kHz transient, sharp attack - simulates click switches like Cherry MX Blue
+  - Variation system adds ±20-30Hz per sample to prevent repetitive sound
+  - CC0 license allows unrestricted use without attribution concerns
+  - CREDITS.md documents all technical details for future asset updates
+  - All 55 tests pass, build succeeds with no warnings
+---
 
 ## 2026-05-02 23:07 - US-012
 - **Implemented:** Configure signing, notarization, and TestFlight build

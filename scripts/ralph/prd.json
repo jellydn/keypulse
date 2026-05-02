@@ -35,7 +35,7 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Placeholder WAV files created (50ms silence). Production app should replace with actual CC0 mechanical keyboard samples."
+      "notes": "All 12 WAV files regenerated using procedural synthesis with distinct acoustic characteristics per profile. Linear: 180Hz soft thock (60ms). Tactile: 280Hz with bump envelope (70ms). Clicky: 450Hz + 3.5kHz click transient (80ms). All files have unique MD5 hashes. CREDITS.md added with full documentation, license (CC0), and technical details. All 55 tests pass."
     },
     {
       "id": "US-003",
@@ -52,8 +52,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "AudioEngine implemented with AVAudioEngine + 8 concurrent AVAudioPlayerNodes. Pre-loads samples as AVAudioPCMBuffer. Includes format conversion for WAV files. Latency target verified through architecture (no file I/O on play call)."
+      "passes": false,
+      "notes": "REVIEW PARTIAL. Implementation looks solid (AVAudioEngine + 8 concurrent player nodes, pre-loaded PCMBuffers, no file I/O on play). However the AC `Measured trigger-to-output latency under 20ms on a developer Mac` was NOT actually measured - only argued from architecture. Next iteration must: add a benchmark test or instrumentation that records measured latency and document the result in PR notes / progress.txt."
     },
     {
       "id": "US-004",
@@ -86,8 +86,8 @@
         "Tests pass"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "KeyPulseController implemented with random sample selection. All key-down events trigger sound playback. Error handling via onError callback. AppDelegate updated to initialize controller and start keyboard monitoring."
+      "passes": false,
+      "notes": "REVIEW FAILED. Issue found 2026-05-02:\n  - AC requires `All key-down events trigger sound, including modifier-only keys (shift/cmd/option/ctrl)` (per resolved decision #2 in PRD).\n  - Actual implementation: `KeyboardMonitor` only subscribes to `CGEventType.keyDown` events (see KeyboardMonitor.swift:87 and the `guard type == .keyDown` at line 153).\n  - On macOS modifier-only key presses generate `CGEventType.flagsChanged` events, NOT `keyDown`. So modifier keys produce no sound.\nNext iteration must: add `flagsChanged` to the event mask, route those events through KeyPulseController (debounced if needed so each modifier press fires once), and add a unit test confirming a synthesized flagsChanged event invokes onKeyDown / triggers playback."
     },
     {
       "id": "US-006",
@@ -182,8 +182,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "Launch at Login implemented using SMAppService.mainApp (macOS 13+). SettingsStore.launchAtLogin property syncs with system SMAppService status as source of truth. Menu bar UI includes toggle. LSUIElement remains YES. All 55 tests pass."
+      "passes": false,
+      "notes": "REVIEW PARTIAL. Launch-at-login wiring (SMAppService.mainApp) and LSUIElement are correct. However the AC `Idle CPU usage measured under 5% on developer Mac (recorded in PR notes)` was NOT measured - no number recorded in progress.txt or PR. Next iteration must: run the built app idle for ~60s, capture CPU via `top -pid` or Instruments, and record the value in progress.txt."
     },
     {
       "id": "US-012",
@@ -198,8 +198,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": true,
-      "notes": "All acceptance criteria met: Bundle ID com.keypulse.app and version 0.1.0 in Info.plist; KeyPulse.entitlements with hardened runtime config (minimal entitlements since no mic/audio input needed); ExportOptions.plist for App Store distribution; build-release.sh for archiving and export; comprehensive TestFlight documentation added to README.md; 55 tests pass."
+      "passes": false,
+      "notes": "REVIEW PARTIAL. Bundle ID, version, entitlements, ExportOptions.plist, and scripts/build-release.sh are all in place. BUT: README.md links to `docs/TESTFLIGHT.md` (line 121) and that file does not exist - the `docs/` directory is missing entirely. Next iteration must: create `docs/TESTFLIGHT.md` with the full TestFlight upload walkthrough (xcodebuild archive -> exportArchive -> notarytool / Transporter -> App Store Connect submission), or move the content inline into README.md and remove the broken link."
     }
   ]
 }
