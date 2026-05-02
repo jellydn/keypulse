@@ -6,6 +6,10 @@
 - Import AppKit + Carbon for macOS menu bar apps
 - SwiftPM `.process()` flattens resource directory structure - use unique filenames across all resources
 - Use `Bundle.module.url(forResource:withExtension:)` to access SwiftPM bundled resources
+- CGEventTap is preferred over IOHIDManager for global keyboard monitoring (simpler API, no device enumeration)
+- Use `kCGEventTapOptionListenOnly` for passive monitoring without intercepting events
+- Accessibility permission check: `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: false])`
+- Pass `self` to C callbacks via `Unmanaged.passUnretained(self).toOpaque()` and convert back with `fromOpaque().takeUnretainedValue()`
 
 ## 2026-05-02 21:18 - US-001
 - **Implemented:** Scaffold Swift macOS menu bar app project
@@ -53,4 +57,20 @@
   - Pre-load all buffers at profile load time to achieve <20ms trigger-to-output latency (no file I/O on play call)
   - `.interrupts` scheduling option ensures clean buffer replacement when reusing the same player node
   - Mute state short-circuits playback before scheduling - efficient and silent
+---
+
+## 2026-05-02 21:30 - US-004
+- **Implemented:** Implement global keyboard hook (event capture)
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/KeyboardMonitor.swift` - New KeyboardMonitor class with CGEventTap
+- **Learnings for future iterations:**
+  - CGEventTap is chosen over IOHIDManager for high-level key event access without complex HID device enumeration
+  - Use `kCGEventTapOptionListenOnly` to monitor without intercepting events (safer for background apps)
+  - Accessibility permission required via `AXIsProcessTrustedWithOptions` with `kAXTrustedCheckOptionPrompt`
+  - Event tap callback uses C-style function pointer; pass `self` as `userInfo` via `Unmanaged.passUnretained`
+  - CGEvent key codes match Carbon virtual key codes (e.g., kVK_Space = 49)
+  - Dispatch handler to main queue for thread safety when updating UI or triggering audio
+  - Open System Settings to Accessibility panel via `NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:...")`
+  - Need to import AppKit for NSWorkspace in addition to CoreGraphics/Carbon
+  - CFRunLoopGetMain() is used for the event tap run loop source (not .current)
 ---
