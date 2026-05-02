@@ -7,6 +7,16 @@ final class SettingsStore {
     /// Shared singleton instance for app-wide settings access.
     static let shared = SettingsStore()
 
+    /// Cache for SMAppService status to avoid expensive IPC on every read.
+    /// Updated when setter is called or when explicitly refreshed.
+    private var cachedLaunchAtLoginStatus: Bool?
+
+    /// Timestamp of last status cache update.
+    private var lastStatusCacheTime: Date?
+
+    /// Cache validity duration (5 seconds) - balance between freshness and performance.
+    private let statusCacheValidity: TimeInterval = 5.0
+
     /// UserDefaults keys for stored settings.
     private enum Keys {
         static let profile = "keypulse_profile"
@@ -98,27 +108,41 @@ final class SettingsStore {
 
     /// Whether the app should launch at login.
     /// This property syncs with SMAppService to reflect the actual system registration state.
+    /// Uses cached status to avoid expensive IPC calls on every read.
     var launchAtLogin: Bool {
         get {
-            // First check the actual system state via SMAppService
+            // Check if we have a valid cached status
+            if let cached = cachedLaunchAtLoginStatus,
+               let lastUpdate = lastStatusCacheTime,
+               Date().timeIntervalSince(lastUpdate) < statusCacheValidity {
+                return cached
+            }
+
+            // Cache miss or expired - query the actual system state via SMAppService
             let serviceStatus = SMAppService.mainApp.status
             let isRegistered = (serviceStatus == .enabled)
 
-            // Check if key exists in UserDefaults
+            // Update cache
+            cachedLaunchAtLoginStatus = isRegistered
+            lastStatusCacheTime = Date()
+
+            // Check if key exists in UserDefaults (first-time sync)
             if UserDefaults.standard.object(forKey: Keys.launchAtLogin) == nil {
                 // If system says it's registered, update our stored value
                 if isRegistered {
                     UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
                 }
-                return isRegistered
             }
 
-            // Return the system state as the source of truth
             return isRegistered
         }
         set {
             // Sync with SMAppService
             let service = SMAppService.mainApp
+
+            // Update cache optimistically
+            cachedLaunchAtLoginStatus = newValue
+            lastStatusCacheTime = Date()
 
             if newValue {
                 // Register for launch at login
@@ -128,7 +152,8 @@ final class SettingsStore {
                         UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
                     } catch {
                         print("Failed to register for launch at login: \(error)")
-                        // Don't update UserDefaults if registration failed
+                        // Invalidate cache on failure so next read queries fresh state
+                        cachedLaunchAtLoginStatus = nil
                     }
                 }
             } else {
@@ -139,11 +164,20 @@ final class SettingsStore {
                         UserDefaults.standard.set(false, forKey: Keys.launchAtLogin)
                     } catch {
                         print("Failed to unregister from launch at login: \(error)")
-                        // Don't update UserDefaults if unregistration failed
+                        // Invalidate cache on failure so next read queries fresh state
+                        cachedLaunchAtLoginStatus = nil
                     }
                 }
             }
         }
+    }
+
+    /// Forces a refresh of the launch at login status from SMAppService.
+    /// Call this when the app becomes active or when you need guaranteed fresh state.
+    func refreshLaunchAtLoginStatus() {
+        cachedLaunchAtLoginStatus = nil
+        lastStatusCacheTime = nil
+        _ = launchAtLogin  // Trigger a fresh read
     }
 
     /// Loads all settings and returns them as a tuple.
