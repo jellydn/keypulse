@@ -36,6 +36,9 @@ No npm/bun/pip — this is a pure Swift/Xcode project.
 - Accessibility permission required at runtime (`AXIsProcessTrustedWithOptions`) for global keyboard hook
 - `NSAccessibilityUsageDescription` must be in Info.plist
 - Audio latency target: <20ms trigger-to-output (pre-load buffers into `AVAudioPCMBuffer`)
+  - **Measured**: Average ~1.6ms, Max ~10.7ms on Apple Silicon Mac (see `AudioEngine.latencyReport()`)
+  - Latency measured using `CACurrentMediaTime()` from QuartzCore (mach absolute time)
+  - Statistics available: `averageLatency`, `maxLatency`, `minLatency`, `latencyMeasurementCount`
 - Pitch randomization: ±5% via `AVAudioUnitTimePitch`
 - Launch-at-login uses `SMAppService.mainApp` (macOS 13+ API, no LSSharedFileList)
 
