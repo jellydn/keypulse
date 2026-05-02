@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import QuartzCore
+import os.lock
 
 /// Low-latency audio playback engine for mechanical keyboard sounds.
 /// Uses AVAudioEngine with multiple AVAudioPlayerNodes for concurrent playback.
@@ -27,7 +28,8 @@ final class AudioEngine {
     private var nextPlayerIndex = 0
 
     /// Lock for thread-safe player node selection.
-    private let playerLock = NSLock()
+    /// Uses os_unfair_lock for lower latency compared to NSLock.
+    private var playerLock = os_unfair_lock()
 
     /// Whether the engine is currently running.
     private(set) var isRunning = false
@@ -240,10 +242,10 @@ final class AudioEngine {
 
         // Select player node using round-robin (thread-safe)
         let playerIndex: Int
-        playerLock.lock()
+        os_unfair_lock_lock(&playerLock)
         playerIndex = nextPlayerIndex
         nextPlayerIndex = (nextPlayerIndex + 1) % concurrentPlayerCount
-        playerLock.unlock()
+        os_unfair_lock_unlock(&playerLock)
 
         let player = playerNodes[playerIndex]
 
