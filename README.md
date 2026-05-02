@@ -20,7 +20,7 @@ feel flat. Mechanical keyboards solve this physically, but are:
 
 ## 💡 Solution
 
-KeyPulse simulates the *feel* of mechanical typing through high-quality,
+KeyPulse simulates the _feel_ of mechanical typing through high-quality,
 low-latency audio playback — system-wide, in any app.
 
 ---
@@ -34,19 +34,19 @@ low-latency audio playback — system-wide, in any app.
 
 ## ✨ MVP Features
 
-| Feature                     | Status   |
-| --------------------------- | -------- |
-| Real-time keystroke sound   | MVP      |
-| 3 sound profiles (linear / tactile / clicky) | MVP |
-| Volume slider + mute        | MVP      |
-| System-wide global hook     | MVP      |
-| Menu bar UI (no Dock icon)  | MVP      |
-| Persisted settings          | MVP      |
-| **Pitch randomization**     | MVP (selected nice-to-have) |
-| Launch at login             | MVP      |
-| Per-app profiles            | v2       |
-| Custom sound packs          | v2       |
-| Windows port                | v3       |
+| Feature                                      | Status                      |
+| -------------------------------------------- | --------------------------- |
+| Real-time keystroke sound                    | MVP                         |
+| 3 sound profiles (linear / tactile / clicky) | MVP                         |
+| Volume slider + mute                         | MVP                         |
+| System-wide global hook                      | MVP                         |
+| Menu bar UI (no Dock icon)                   | MVP                         |
+| Persisted settings                           | MVP                         |
+| **Pitch randomization**                      | MVP (selected nice-to-have) |
+| Launch at login                              | MVP                         |
+| Per-app profiles                             | v2                          |
+| Custom sound packs                           | v2                          |
+| Windows port                                 | v3                          |
 
 ## ⚙️ User Flow
 
@@ -147,6 +147,138 @@ Each story is sized to fit a single Ralph iteration (one fresh context window).
 - [ ] No noticeable lag during typing
 - [ ] Stable across major apps (browser, IDE, editor)
 - [ ] Runs unobtrusively in the background
+
+---
+
+---
+
+## 🚀 TestFlight Distribution
+
+KeyPulse is configured for App Store distribution and TestFlight beta testing.
+
+### Prerequisites
+
+1. **Apple Developer Account** (Individual or Organization)
+2. **App Store Connect** access with valid Team ID
+3. **Provisioning Profile** for `com.keypulse.app`
+4. **Xcode 15+** with macOS SDK
+
+### Configuration
+
+1. **Update Team ID** in `KeyPulse/ExportOptions.plist`:
+
+   ```xml
+   <key>teamID</key>
+   <string>YOUR_ACTUAL_TEAM_ID</string>
+   ```
+
+   Find your Team ID in [App Store Connect](https://appstoreconnect.apple.com) → Users and Access → Keys.
+
+2. **Verify Bundle ID** in `KeyPulse/Info.plist`:
+
+   ```xml
+   <key>CFBundleIdentifier</key>
+   <string>com.keypulse.app</string>
+   ```
+
+3. **Update Version** (optional):
+   ```xml
+   <key>CFBundleShortVersionString</key>
+   <string>0.1.0</string>
+   <key>CFBundleVersion</key>
+   <string>1</string>
+   ```
+
+### Build Script
+
+```bash
+# Build release archive and export for App Store
+./scripts/build-release.sh 0.1.0 1
+```
+
+This creates:
+
+- `build/KeyPulse-0.1.0-1.xcarchive` — signed archive
+- `build/KeyPulse-0.1.0-1/` — exported app bundle
+- `build/*.log` — build logs
+
+### Upload to TestFlight
+
+#### Method 1: Xcode Organizer (Recommended)
+
+1. Open Xcode → Window → Organizer
+2. Select the KeyPulse archive
+3. Click "Distribute App"
+4. Choose "App Store Connect"
+5. Follow prompts for uploading
+
+#### Method 2: Transporter (Command Line)
+
+```bash
+# First, validate the app
+xcrun altool --validate-app \
+    -f build/KeyPulse-0.1.0-1/KeyPulse.app \
+    -t macos \
+    -u "your@email.com" \
+    -p "@keychain:AC_PASSWORD"
+
+# Then upload
+xcrun altool --upload-app \
+    -f build/KeyPulse-0.1.0-1/KeyPulse.app \
+    -t macos \
+    -u "your@email.com" \
+    -p "@keychain:AC_PASSWORD"
+```
+
+#### Method 3: altool (Legacy)
+
+```bash
+xcrun altool --upload-app \
+    -f build/KeyPulse-0.1.0-1.xcarchive \
+    -t macos \
+    -u "your@email.com" \
+    -p "@keychain:AC_PASSWORD"
+```
+
+### Add Testers
+
+1. Go to [App Store Connect](https://appstoreconnect.apple.com)
+2. Select your app → TestFlight tab
+3. Under **Internal Testing** → **App Store Connect Users**
+4. Click the **+** button to add testers
+5. Testers receive an email invitation
+
+### Entitlements & Security
+
+KeyPulse uses minimal hardened runtime entitlements (`KeyPulse/KeyPulse.entitlements`):
+
+- **No microphone access** — only plays audio, never records
+- **No network access** — works offline completely
+- **No special file system access** — only reads bundled resources
+- **CGEventTap** — Requires Accessibility permission at runtime (user-granted)
+
+### Code Signing Verification
+
+```bash
+# Verify code signature
+codesign -dvv build/KeyPulse-0.1.0-1/KeyPulse.app
+
+# Verify entitlements
+codesign -d --entitlements - build/KeyPulse-0.1.0-1/KeyPulse.app
+
+# Verify hardened runtime
+codesign -dv --verbose=4 build/KeyPulse-0.1.0-1/KeyPulse.app 2>&1 | grep Hardened
+```
+
+### Troubleshooting
+
+| Issue                            | Solution                                                                                       |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| "Invalid Team ID"                | Update `teamID` in ExportOptions.plist with your actual Team ID                                |
+| "Provisioning profile not found" | Create App Store provisioning profile in Apple Developer Portal                                |
+| "Hardened runtime not enabled"   | Check KeyPulse.entitlements is included in build                                               |
+| "App-specific password required" | Generate at [appleid.apple.com](https://appleid.apple.com) → Security → App-Specific Passwords |
+| "Bundle ID mismatch"             | Ensure com.keypulse.app is registered in App Store Connect                                     |
 
 ---
 

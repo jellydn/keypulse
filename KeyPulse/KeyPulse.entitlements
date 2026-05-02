@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        KeyPulse Hardened Runtime Entitlements
+
+        This macOS app requires minimal entitlements because:
+        - It's an LSUIElement menu bar app that monitors keyboard events globally
+        - Uses CGEventTap with kCGEventTapOptionListenOnly (passive monitoring)
+        - Uses AVAudioEngine for local audio playback only (no microphone access)
+        - Uses SMAppService for launch-at-login (handled by ServiceManagement.framework)
+
+        No microphone or audio input access is required.
+        Accessibility permission is handled at runtime via user prompt (not entitlement).
+        ServiceManagement for launch-at-login uses an embedded helper, not an entitlement.
+    -->
+
+    <!-- Enable hardened runtime - required for notarization -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <false/>
+
+    <!-- No network client/server access needed -->
+    <key>com.apple.security.network.client</key>
+    <false/>
+    <key>com.apple.security.network.server</key>
+    <false/>
+
+    <!-- No file system special access needed (only reads bundled resources) -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <false/>
+
+    <!--
+        Note: CGEventTap for keyboard monitoring does NOT require a specific entitlement.
+        It requires Accessibility permission which is granted at runtime via
+        AXIsProcessTrustedWithOptions() and the NSAccessibilityUsageDescription in Info.plist.
+    -->
+</dict>
+</plist>
