@@ -34,6 +34,23 @@
 - **Pre-loaded buffers**: Use `AVAudioPCMBuffer` loaded at startup to eliminate file I/O during playback (<20ms target)
 - **Round-robin players**: Multiple `AVAudioPlayerNode` instances enable concurrent playback without cutting off sounds
 
+## 2026-05-04 10:15 - US-012
+- **Implemented:** Configure signing, notarization, and TestFlight build (documentation completion)
+- **Files changed:**
+  - `docs/TESTFLIGHT.md` - New comprehensive TestFlight distribution guide (280 lines)
+  - `scripts/ralph/prd.json` - Marked US-012 as passing
+- **Learnings for future iterations:**
+  - Broken links in README.md should be fixed immediately - docs/TESTFLIGHT.md was referenced but didn't exist
+  - TestFlight documentation should cover: code signing setup, archive building, upload methods (4 options), tester management
+  - CGEventTap apps need special note about Accessibility permission in TestFlight builds (sandbox limitations)
+  - ExportOptions.plist uses manual signing by default; automatic signing available as fallback
+  - Team ID location: App Store Connect → Users and Access → Keys
+  - Build numbers must be unique for each upload; version strings should follow semver
+  - Hardened runtime is required for App Store; no special entitlements needed for audio output-only apps
+  - CGEventTap does NOT require entitlements - only runtime Accessibility permission
+  - All 60 tests pass, build succeeds with no warnings
+---
+
 ## 2026-05-04 10:00 - US-011
 - **Implemented:** Add launch-at-login and background runtime polish (CPU measurement verification)
 - **Files changed:**

@@ -198,8 +198,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": "REVIEW PARTIAL. Bundle ID, version, entitlements, ExportOptions.plist, and scripts/build-release.sh are all in place. BUT: README.md links to `docs/TESTFLIGHT.md` (line 121) and that file does not exist - the `docs/` directory is missing entirely. Next iteration must: create `docs/TESTFLIGHT.md` with the full TestFlight upload walkthrough (xcodebuild archive -> exportArchive -> notarytool / Transporter -> App Store Connect submission), or move the content inline into README.md and remove the broken link."
+      "passes": true,
+      "notes": "Bundle ID (com.keypulse.app), version (0.1.0), entitlements (KeyPulse.entitlements), ExportOptions.plist, and scripts/build-release.sh are all in place. Created docs/TESTFLIGHT.md with comprehensive TestFlight documentation including: code signing setup, building release archives (3 methods), uploading to App Store Connect (4 methods), adding internal testers, and troubleshooting section. All 60 tests pass."
     },
     {
       "id": "US-013",
