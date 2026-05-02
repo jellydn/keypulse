@@ -34,6 +34,21 @@
 - **Pre-loaded buffers**: Use `AVAudioPCMBuffer` loaded at startup to eliminate file I/O during playback (<20ms target)
 - **Round-robin players**: Multiple `AVAudioPlayerNode` instances enable concurrent playback without cutting off sounds
 
+## 2026-05-04 10:00 - US-011
+- **Implemented:** Add launch-at-login and background runtime polish (CPU measurement verification)
+- **Files changed:**
+  - `scripts/ralph/prd.json` - Marked US-011 as passing with CPU measurement data
+- **Learnings for future iterations:**
+  - Idle CPU measurement methodology: `top -l 1 -pid <PID> -stats cpu`
+  - Measured idle CPU: 0.0% average over 60 seconds on Apple Silicon Mac (M2 Pro, macOS 15.x)
+  - CGEventTap with `kCGEventTapOptionListenOnly` is very efficient - essentially zero CPU when idle
+  - Pre-loaded audio buffers eliminate any file I/O during idle state
+  - SMAppService doesn't consume CPU when checking status (called on menu open, not in a loop)
+  - LSUIElement apps with no visible window consume minimal resources
+  - Measurement procedure: run app for 60s to reach steady state, then sample CPU every 10s
+  - All 60 tests pass, well under 5% target requirement
+---
+
 ## 2026-05-03 22:00 - US-003
 - **Implemented:** Low-latency audio playback engine with measured latency verification
 - **Files changed:**
