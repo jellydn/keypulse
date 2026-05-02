@@ -1,0 +1,21 @@
+## Codebase Patterns
+- SwiftPM-based macOS app project structure
+- Build with: `cd KeyPulse && xcodebuild -scheme KeyPulse -destination 'platform=macOS' build`
+- Alternative build: `cd KeyPulse && swift build`
+- LSUIElement apps use `NSStatusBar.system` (not `.shared`)
+- Import AppKit + Carbon for macOS menu bar apps
+
+## 2026-05-02 21:18 - US-001
+- **Implemented:** Scaffold Swift macOS menu bar app project
+- **Files changed:**
+  - `KeyPulse/Package.swift` - SwiftPM package manifest with macOS 13+ deployment target
+  - `KeyPulse/Info.plist` - LSUIElement = YES, accessibility description
+  - `KeyPulse/Sources/KeyPulse/KeyPulse.swift` - Main entry point
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - App delegate with NSStatusItem
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Basic test scaffold
+- **Learnings for future iterations:**
+  - SwiftPM projects can use xcodebuild with `-destination "platform=macOS"` flag
+  - NSStatusBar uses `.system` not `.shared` in modern Swift
+  - For LSUIElement apps, `applicationShouldTerminateAfterLastWindowClosed` returns false
+  - Swift 6.3+ uses `swiftLanguageMode` instead of `swiftLanguageVersion`
+---

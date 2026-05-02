@@ -1,0 +1,203 @@
+{
+  "project": "KeyPulse",
+  "branchName": "ralph/keypulse-mvp",
+  "description": "KeyPulse - Lightweight macOS menu bar app that plays low-latency mechanical keyboard sounds for every keystroke, with bundled WAV samples, 3 sound profiles, volume control, and pitch randomization.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Scaffold Swift macOS menu bar app project",
+      "description": "As a developer, I need a working Xcode project for a macOS menu bar (LSUIElement) app so subsequent stories have a build target.",
+      "acceptanceCriteria": [
+        "Create `KeyPulse.xcodeproj` (or SwiftPM-driven xcodeproj) with macOS app target, Swift 5.9+, deployment target macOS 13",
+        "Set `LSUIElement = YES` in Info.plist (no Dock icon, menu bar only)",
+        "App launches and shows a placeholder NSStatusItem with title 'KP'",
+        "`xcodebuild -scheme KeyPulse build` succeeds with no warnings introduced",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "SwiftPM-based project. Build command: cd KeyPulse && xcodebuild -scheme KeyPulse -destination 'platform=macOS' build"
+    },
+    {
+      "id": "US-002",
+      "title": "Bundle WAV sound assets for 3 profiles",
+      "description": "As a developer, I need pre-recorded keystroke samples bundled in the app so the audio engine has assets to play.",
+      "acceptanceCriteria": [
+        "Add `Resources/Sounds/` group containing folders: `linear/`, `tactile/`, `clicky/`",
+        "Each profile folder has at least 4 short WAV samples (16-bit, 44.1kHz, < 100ms)",
+        "Samples are added to the app target's Copy Bundle Resources phase",
+        "Add a `SoundAssets` enum that resolves bundle URLs for each profile",
+        "Unit test verifies all sample URLs resolve and files exist",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Use placeholder/CC0 samples if no curated set is available."
+    },
+    {
+      "id": "US-003",
+      "title": "Implement low-latency Core Audio playback engine",
+      "description": "As a developer, I need an `AudioEngine` that pre-loads samples and triggers playback in under 20ms so keystrokes feel instant.",
+      "acceptanceCriteria": [
+        "Create `AudioEngine` using `AVAudioEngine` + `AVAudioPlayerNode` (or Core Audio `AUGraph`)",
+        "Pre-load all samples for the active profile into `AVAudioPCMBuffer` instances at startup",
+        "`play(sampleIndex:)` schedules a buffer with no file I/O on the call",
+        "Concurrent playback supported (overlapping keystrokes do not cut each other off)",
+        "Measured trigger-to-output latency under 20ms on a developer Mac",
+        "Unit test confirms engine starts, loads buffers, and `play(...)` does not throw",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Implement global keyboard hook (event capture)",
+      "description": "As a developer, I need a system-wide keystroke listener so the app reacts to typing in any application.",
+      "acceptanceCriteria": [
+        "Create `KeyboardMonitor` class that captures key-down events system-wide",
+        "Choose between `CGEventTap` and `IOHIDManager` (document choice in code comment)",
+        "If Accessibility permission required, prompt user via `AXIsProcessTrustedWithOptions` on first run",
+        "Add `NSAccessibilityUsageDescription` to Info.plist",
+        "Monitor exposes a callback `onKeyDown: (keyCode: UInt16) -> Void`",
+        "Manual verification doc in PR: typing in TextEdit triggers the callback (logged to Console)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "3D in PRD: defer hook decision to implementation. CGEventTap is the most likely choice."
+    },
+    {
+      "id": "US-005",
+      "title": "Wire keystroke events to audio playback",
+      "description": "As a user, I want to hear a sound the moment I press any key so typing feels mechanical.",
+      "acceptanceCriteria": [
+        "Create `KeyPulseController` that owns `KeyboardMonitor` + `AudioEngine`",
+        "On each key-down, controller picks a random sample from the current profile and calls `AudioEngine.play(...)`",
+        "Modifier-only key events (pure shift/cmd/option/ctrl with no other key) optionally suppressed (config flag, default on)",
+        "Manual verification: launch app, type in any app, hear a sound per keystroke with no audible lag",
+        "Unit test for sample-selection rotation logic",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add sound profile model and runtime switching",
+      "description": "As a user, I want to switch between Linear, Tactile, and Clicky profiles so I can pick the feel I prefer.",
+      "acceptanceCriteria": [
+        "Define `SoundProfile` enum: `.linear`, `.tactile`, `.clicky` with display names",
+        "`KeyPulseController.setProfile(_:)` swaps loaded buffers without restarting the engine",
+        "Switching profile while typing does not crash and applies on the next keystroke",
+        "Unit test confirms `setProfile` reloads the correct buffer set",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add volume control and mute toggle",
+      "description": "As a user, I want a 0-100 volume slider and a mute toggle so I can control loudness.",
+      "acceptanceCriteria": [
+        "`AudioEngine` exposes `volume: Float` (0.0-1.0) bound to the player node's volume",
+        "`AudioEngine.isMuted: Bool` short-circuits playback when true (no buffer scheduling)",
+        "Controller provides `setVolume(_ percent: Int)` (0-100) and `setMuted(_:)`",
+        "Unit tests verify volume clamping and mute behavior",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Build menu bar UI (toggle, profile picker, volume slider)",
+      "description": "As a user, I want a simple menu bar interface so I can control KeyPulse without opening a window.",
+      "acceptanceCriteria": [
+        "`NSStatusItem` shows a custom monochrome template icon",
+        "Clicking opens an NSMenu with: 'Enabled' toggle, profile submenu (Linear/Tactile/Clicky with checkmarks), volume slider (NSSlider in NSMenuItem.view), 'Mute', 'Quit KeyPulse'",
+        "All controls reflect and update controller state in real time",
+        "Manual verification: each control changes behavior immediately while typing",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "macOS app - no browser verification; manual click-through required."
+    },
+    {
+      "id": "US-009",
+      "title": "Persist user settings in UserDefaults",
+      "description": "As a user, I want my profile, volume, mute state, and enabled state to survive app restarts.",
+      "acceptanceCriteria": [
+        "Create `SettingsStore` with keyed accessors: `profile`, `volume`, `isMuted`, `isEnabled`",
+        "Load values on app launch and apply to controller before showing menu",
+        "Save on every change via property observers",
+        "Unit test round-trips each setting through `UserDefaults`",
+        "Manual verification: change settings, quit, relaunch - settings restored",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add pitch randomization (nice-to-have selected)",
+      "description": "As a user, I want subtle pitch variation per keystroke so repeated typing does not become fatiguing.",
+      "acceptanceCriteria": [
+        "Add `pitchRandomization: Bool` to `SettingsStore` (default true)",
+        "`AudioEngine.play(...)` randomly varies playback rate by +/- 5% per buffer (via `AVAudioUnitTimePitch` or per-node rate)",
+        "Add menu item 'Pitch Variation' toggle reflecting the setting",
+        "Unit test confirms rate stays within +/- 5% bounds",
+        "Manual verification: repeated identical keys sound subtly different",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "1B in PRD: pitch randomization chosen as the included nice-to-have (mitigates audio fatigue risk)."
+    },
+    {
+      "id": "US-011",
+      "title": "Add launch-at-login and background runtime polish",
+      "description": "As a user, I want KeyPulse to start when I log in and run unobtrusively so it is set-and-forget.",
+      "acceptanceCriteria": [
+        "Add 'Launch at Login' menu item using `SMAppService.mainApp` (macOS 13+)",
+        "State persists in `SettingsStore` and reflects current login-item registration",
+        "App keeps `LSUIElement = YES` (no Dock icon, no main window)",
+        "Idle CPU usage measured under 5% on developer Mac (recorded in PR notes)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Configure signing, notarization, and TestFlight build",
+      "description": "As a developer, I need a distributable beta build so testers can install KeyPulse via TestFlight.",
+      "acceptanceCriteria": [
+        "Set bundle identifier `com.keypulse.app` (or chosen reverse-DNS) and version 0.1.0",
+        "Configure code signing with Developer ID + automatic signing",
+        "Add hardened runtime entitlements (Audio Input not required; document if any are needed)",
+        "Add `scripts/build-release.sh` that runs `xcodebuild archive` and `xcodebuild -exportArchive` with App Store export options",
+        "Document TestFlight upload steps in `README.md`",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "4D in PRD: TestFlight beta first."
+    }
+  ]
+}
