@@ -12,8 +12,21 @@
 - Pass `self` to C callbacks via `Unmanaged.passUnretained(self).toOpaque()` and convert back with `fromOpaque().takeUnretainedValue()`
 - KeyPulseController acts as the central coordinator between KeyboardMonitor and AudioEngine
 - Random sample selection for variety: `Int.random(in: 0..<SoundAssets.samplesPerProfile)`
-- KeyPulseController must be retained by AppDelegate to prevent deallocation
-- Always check accessibility permission before starting keyboard monitoring
+  - KeyPulseController must be retained by AppDelegate to prevent deallocation
+  - Always check accessibility permission before starting keyboard monitoring
+
+## 2026-05-02 21:35 - US-006
+- **Implemented:** Add sound profile model and runtime switching
+- **Files changed:**
+  - `scripts/ralph/prd.json` - Marked US-006 as passing
+- **Learnings for future iterations:**
+  - SoundProfile enum already existed in SoundAssets.swift with .linear, .tactile, .clicky cases
+  - KeyPulseController.setProfile() delegates to AudioEngine.loadProfile() for buffer swapping
+  - AudioEngine.loadProfile() atomically swaps buffers: loads new buffers first, then assigns to property
+  - Profile switching is thread-safe because buffer array assignment is atomic in Swift
+  - All 32 tests pass including testKeyPulseControllerSetProfile and testAudioEngineLoadProfile
+  - No code changes needed - functionality was fully implemented in previous stories
+---
 
 ## 2026-05-02 21:18 - US-001
 - **Implemented:** Scaffold Swift macOS menu bar app project
