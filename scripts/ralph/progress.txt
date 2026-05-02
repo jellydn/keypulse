@@ -18,6 +18,9 @@
 - AudioEngine.isMuted short-circuits playback at the start of play() method (no buffer scheduling when muted)
 - KeyPulseController.setVolume(_ percent: Int) converts percentage (0-100) to Float for AudioEngine
 - Update volume on all player nodes via loop in updateVolume() method
+- SettingsStore uses UserDefaults with `object(forKey:)` check to distinguish unset values from valid values (e.g., volume=0 vs not set)
+- SettingsStore is a singleton for app-wide access; settings saved immediately on change via menu callbacks
+- Use `applicationWillTerminate` to ensure settings are saved before app quit
 
 ## 2026-05-02 22:00 - US-007
 - **Implemented:** Add volume control and mute toggle
@@ -160,4 +163,26 @@
   - MenuBarManager uses weak reference to controller to avoid retain cycles
   - Callback pattern for menu actions allows AppDelegate to log/debug if needed
   - All 32 tests pass, build succeeds with no warnings
+---
+
+## 2026-05-02 22:40 - US-009
+- **Implemented:** Persist user settings in UserDefaults
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/SettingsStore.swift` - New file: UserDefaults persistence layer
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Updated to load/save settings, apply on launch
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 16 new unit tests for SettingsStore
+  - `scripts/ralph/prd.json` - Marked US-009 as passing
+- **Learnings for future iterations:**
+  - SettingsStore implemented as singleton with `shared` property for app-wide access
+  - UserDefaults integer(forKey:) returns 0 for missing keys, which conflicts with valid volume=0
+  - Solution: Use `object(forKey:) == nil` to check if key exists before reading value
+  - All settings properties use get/set with automatic persistence to UserDefaults
+  - KeyPulseAppDelegate.setupController() loads saved profile for initial setup
+  - KeyPulseAppDelegate.applySettingsToController() applies volume/mute/enabled after controller init
+  - Settings are saved on every menu change via callback closures with `[weak self]` to avoid retain cycles
+  - `applicationWillTerminate` saves settings as a final backup before quit
+  - 16 unit tests added: defaults, persistence, clamping, round-trips, saveFromController, applyToController
+  - Test `resetToDefaults()` is critical for test isolation between SettingsStore tests
+  - All 46 tests pass, build succeeds with no warnings
+  - Pattern: When storing values where 0 is valid (like volume), always check `object(forKey:)` existence first
 ---
