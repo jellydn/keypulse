@@ -17,6 +17,13 @@ final class AudioEngine {
     /// Index corresponds to sample index (0 to samplesPerProfile-1).
     private var buffers: [AVAudioPCMBuffer] = []
 
+    /// Cached buffers for all profiles (pre-warmed for instant switching).
+    /// Key: SoundProfile, Value: Array of 4 PCM buffers.
+    private var profileCache: [SoundProfile: [AVAudioPCMBuffer]] = [:]
+
+    /// Whether all profiles have been pre-warmed.
+    private(set) var isPreWarmed = false
+
     /// Current sound profile.
     private(set) var currentProfile: SoundProfile?
 
@@ -134,13 +141,20 @@ final class AudioEngine {
     /// - Parameter profile: The sound profile to load.
     /// - Throws: AudioEngineError if samples fail to load.
     func loadProfile(_ profile: SoundProfile) throws {
-        // Get sample URLs for the profile
+        // Check if profile is already cached (pre-warmed)
+        if let cachedBuffers = profileCache[profile] {
+            // Instant switch using cached buffers
+            buffers = cachedBuffers
+            currentProfile = profile
+            return
+        }
+
+        // Fallback: Load on-demand (first time or cache miss)
         let urls = SoundAssets.sampleURLs(for: profile)
         guard urls.count == SoundAssets.samplesPerProfile else {
             throw AudioEngineError.bufferLoadFailed
         }
 
-        // Load each sample into a PCM buffer, converting to common format
         var newBuffers: [AVAudioPCMBuffer] = []
         newBuffers.reserveCapacity(urls.count)
 
@@ -151,9 +165,43 @@ final class AudioEngine {
             newBuffers.append(buffer)
         }
 
-        // Atomically swap buffers
         buffers = newBuffers
         currentProfile = profile
+    }
+
+    /// Pre-warms all profiles by loading and caching their buffers.
+    /// Call this after engine start for instant profile switching.
+    /// - Throws: AudioEngineError if any profile fails to load.
+    func preWarmAllProfiles() throws {
+        guard isRunning else {
+            throw AudioEngineError.engineNotRunning
+        }
+
+        let profiles: [SoundProfile] = [.linear, .tactile, .clicky]
+
+        for profile in profiles {
+            // Skip if already cached
+            guard profileCache[profile] == nil else { continue }
+
+            let urls = SoundAssets.sampleURLs(for: profile)
+            guard urls.count == SoundAssets.samplesPerProfile else {
+                throw AudioEngineError.bufferLoadFailed
+            }
+
+            var profileBuffers: [AVAudioPCMBuffer] = []
+            profileBuffers.reserveCapacity(urls.count)
+
+            for url in urls {
+                guard let buffer = loadAndConvertBuffer(from: url) else {
+                    throw AudioEngineError.bufferLoadFailed
+                }
+                profileBuffers.append(buffer)
+            }
+
+            profileCache[profile] = profileBuffers
+        }
+
+        isPreWarmed = true
     }
 
     /// Loads a WAV file and converts it to the common format if needed.
