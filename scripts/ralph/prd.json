@@ -150,8 +150,8 @@
         "Tests pass"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "SettingsStore implemented as singleton with UserDefaults backing. Supports profile (SoundProfile), volume (Int 0-100), isMuted (Bool), isEnabled (Bool). KeyPulseAppDelegate loads settings on launch via applyToController() and saves on termination. Menu actions persist settings via callback closures. 16 unit tests covering defaults, persistence, clamping, round-trips. All 46 tests pass."
     },
     {
       "id": "US-010",
