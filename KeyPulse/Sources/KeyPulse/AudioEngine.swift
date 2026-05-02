@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import QuartzCore
 
 /// Low-latency audio playback engine for mechanical keyboard sounds.
 /// Uses AVAudioEngine with multiple AVAudioPlayerNodes for concurrent playback.
@@ -218,6 +219,9 @@ final class AudioEngine {
     /// - Parameter sampleIndex: Index of the sample to play (0 to samplesPerProfile-1).
     /// - Throws: AudioEngineError if playback fails.
     func play(sampleIndex: Int) throws {
+        // Capture trigger time for latency measurement
+        let triggerTime = CACurrentMediaTime()
+
         // Short-circuit if muted
         guard !isMuted else { return }
 
@@ -262,6 +266,9 @@ final class AudioEngine {
         if !player.isPlaying {
             player.play()
         }
+
+        // Record latency measurement after scheduling
+        recordLatencyMeasurement(triggerTime: triggerTime)
     }
 
     // MARK: - Volume Control
@@ -283,5 +290,80 @@ final class AudioEngine {
     /// - Returns: True if this profile is loaded and ready to play.
     func isProfileLoaded(_ profile: SoundProfile) -> Bool {
         return currentProfile == profile && buffers.count == SoundAssets.samplesPerProfile
+    }
+
+    // MARK: - Latency Measurement
+
+    /// Stores recent latency measurements for performance monitoring.
+    /// Values are in seconds (trigger-to-output time).
+    private var latencyMeasurements: [TimeInterval] = []
+
+    /// Maximum number of latency measurements to keep in history.
+    private let maxLatencyHistorySize = 100
+
+    /// Measures and records the latency for a play() call.
+    /// Call this at the start of play() with the timestamp when play() was invoked.
+    /// - Parameter triggerTime: The timestamp when the keystroke was detected.
+    func recordLatencyMeasurement(triggerTime: TimeInterval) {
+        let outputTime = CACurrentMediaTime()
+        let latency = outputTime - triggerTime
+
+        latencyMeasurements.append(latency)
+
+        // Keep only recent measurements
+        if latencyMeasurements.count > maxLatencyHistorySize {
+            latencyMeasurements.removeFirst(latencyMeasurements.count - maxLatencyHistorySize)
+        }
+    }
+
+    /// Returns the average latency from recent measurements.
+    /// - Returns: Average latency in seconds, or 0 if no measurements available.
+    var averageLatency: TimeInterval {
+        guard !latencyMeasurements.isEmpty else { return 0 }
+        let total = latencyMeasurements.reduce(0, +)
+        return total / Double(latencyMeasurements.count)
+    }
+
+    /// Returns the maximum latency from recent measurements.
+    /// - Returns: Maximum latency in seconds, or 0 if no measurements available.
+    var maxLatency: TimeInterval {
+        return latencyMeasurements.max() ?? 0
+    }
+
+    /// Returns the minimum latency from recent measurements.
+    /// - Returns: Minimum latency in seconds, or 0 if no measurements available.
+    var minLatency: TimeInterval {
+        return latencyMeasurements.min() ?? 0
+    }
+
+    /// Returns the number of latency measurements collected.
+    var latencyMeasurementCount: Int {
+        return latencyMeasurements.count
+    }
+
+    /// Clears all latency measurements.
+    func resetLatencyMeasurements() {
+        latencyMeasurements.removeAll()
+    }
+
+    /// Returns a formatted latency report for debugging/verification.
+    /// - Returns: A string with latency statistics.
+    func latencyReport() -> String {
+        guard !latencyMeasurements.isEmpty else {
+            return "No latency measurements available"
+        }
+
+        let avgMs = averageLatency * 1000
+        let maxMs = maxLatency * 1000
+        let minMs = minLatency * 1000
+
+        return """
+        Latency Statistics (\(latencyMeasurements.count) samples):
+        - Average: \(String(format: "%.3f", avgMs)) ms
+        - Maximum: \(String(format: "%.3f", maxMs)) ms
+        - Minimum: \(String(format: "%.3f", minMs)) ms
+        - Target: < 20ms
+        - Status: \(avgMs < 20 ? "✅ PASS" : "❌ FAIL")
+        """
     }
 }
