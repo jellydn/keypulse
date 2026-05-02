@@ -50,6 +50,11 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
             self?.settingsStore.isMuted = muted
         }
 
+        menuBarManager?.onPitchVariationChanged = { [weak self] enabled in
+            print("KeyPulse: Pitch variation changed to \(enabled)")
+            self?.settingsStore.pitchRandomization = enabled
+        }
+
         menuBarManager?.onQuit = { [weak self] in
             print("KeyPulse: Quit requested")
             self?.saveSettings()
@@ -91,7 +96,7 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
 
         // Apply saved settings to the controller
         settingsStore.applyToController(controller)
-        print("KeyPulse: Applied saved settings - profile: \(controller.currentProfile.displayName), volume: \(controller.volume)%, muted: \(controller.isMuted), enabled: \(controller.isEnabled)")
+        print("KeyPulse: Applied saved settings - profile: \(controller.currentProfile.displayName), volume: \(controller.volume)%, muted: \(controller.isMuted), enabled: \(controller.isEnabled), pitchVariation: \(controller.pitchRandomization)")
     }
 
     private func saveSettings() {

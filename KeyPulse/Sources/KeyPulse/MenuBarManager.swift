@@ -11,6 +11,7 @@ final class MenuBarManager {
     /// Menu items that need to be updated dynamically
     private var enabledMenuItem: NSMenuItem?
     private var muteMenuItem: NSMenuItem?
+    private var pitchVariationMenuItem: NSMenuItem?
     private var volumeSliderItem: NSMenuItem?
     private var volumeSlider: NSSlider?
     private var profileMenuItems: [SoundProfile: NSMenuItem] = [:]
@@ -20,6 +21,7 @@ final class MenuBarManager {
     var onProfileChanged: ((SoundProfile) -> Void)?
     var onVolumeChanged: ((Int) -> Void)?
     var onMuteChanged: ((Bool) -> Void)?
+    var onPitchVariationChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
     /// Creates a new menu bar manager.
@@ -146,6 +148,15 @@ final class MenuBarManager {
         muteMenuItem?.target = self
         menu.addItem(muteMenuItem!)
 
+        // Pitch Variation toggle
+        pitchVariationMenuItem = NSMenuItem(
+            title: "Pitch Variation",
+            action: #selector(togglePitchVariation),
+            keyEquivalent: ""
+        )
+        pitchVariationMenuItem?.target = self
+        menu.addItem(pitchVariationMenuItem!)
+
         menu.addItem(NSMenuItem.separator())
 
         // Quit
@@ -179,6 +190,9 @@ final class MenuBarManager {
 
         // Update mute state
         muteMenuItem?.state = controller.isMuted ? .on : .off
+
+        // Update pitch variation state
+        pitchVariationMenuItem?.state = controller.pitchRandomization ? .on : .off
     }
 
     // MARK: - Actions
@@ -220,6 +234,14 @@ final class MenuBarManager {
         controller.setMuted(newState)
         muteMenuItem?.state = newState ? .on : .off
         onMuteChanged?(newState)
+    }
+
+    @objc private func togglePitchVariation() {
+        guard let controller = controller else { return }
+        let newState = !controller.pitchRandomization
+        controller.setPitchRandomization(newState)
+        pitchVariationMenuItem?.state = newState ? .on : .off
+        onPitchVariationChanged?(newState)
     }
 
     @objc private func quitApp() {

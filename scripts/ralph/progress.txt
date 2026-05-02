@@ -21,6 +21,8 @@
 - SettingsStore uses UserDefaults with `object(forKey:)` check to distinguish unset values from valid values (e.g., volume=0 vs not set)
 - SettingsStore is a singleton for app-wide access; settings saved immediately on change via menu callbacks
 - Use `applicationWillTerminate` to ensure settings are saved before app quit
+- Pitch randomization uses AVAudioPlayerNode.rate property (±5% via Float.random(in: 0.95...1.05)) - simpler than AVAudioUnitTimePitch
+- SettingsStore stores Bool settings with same `object(forKey:)` pattern as other types to distinguish unset from false
 
 ## 2026-05-02 22:00 - US-007
 - **Implemented:** Add volume control and mute toggle
@@ -185,4 +187,25 @@
   - Test `resetToDefaults()` is critical for test isolation between SettingsStore tests
   - All 46 tests pass, build succeeds with no warnings
   - Pattern: When storing values where 0 is valid (like volume), always check `object(forKey:)` existence first
+---
+
+## 2026-05-02 22:55 - US-010
+- **Implemented:** Add pitch randomization (nice-to-have selected)
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/SettingsStore.swift` - Added `pitchRandomization: Bool` property with default true
+  - `KeyPulse/Sources/KeyPulse/AudioEngine.swift` - Added pitch randomization via player node rate property (±5%)
+  - `KeyPulse/Sources/KeyPulse/KeyPulseController.swift` - Added `setPitchRandomization()` and `pitchRandomization` property
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - Added "Pitch Variation" menu toggle
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Added onPitchVariationChanged callback and settings persistence
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 6 new unit tests for pitch randomization
+  - `scripts/ralph/prd.json` - Marked US-010 as passing
+- **Learnings for future iterations:**
+  - Pitch randomization implemented via AVAudioPlayerNode.rate property (not AVAudioUnitTimePitch) - simpler API
+  - Rate range: 0.95 to 1.05 (±5%) using `Float.random(in: pitchRandomizationRange)`
+  - Rate is applied per-player-node before scheduling each buffer
+  - Default in SettingsStore is `true` (enabled by default as per US-010 acceptance criteria)
+  - Pattern: Bool settings in UserDefaults use same `object(forKey:)` check as Int to distinguish unset from false
+  - 6 new unit tests: pitchRandomizationDisabled, pitchRandomizationEnabled, controllerPitchRandomization, default, persistence, applyToController
+  - All 52 tests pass, build succeeds with no warnings
+  - Menu item follows same pattern as other toggles: checkmark reflects state, callback persists to SettingsStore
 ---

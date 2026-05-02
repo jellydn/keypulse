@@ -12,6 +12,7 @@ final class SettingsStore {
         static let volume = "keypulse_volume"
         static let isMuted = "keypulse_isMuted"
         static let isEnabled = "keypulse_isEnabled"
+        static let pitchRandomization = "keypulse_pitchRandomization"
     }
 
     /// Default values for settings.
@@ -20,6 +21,7 @@ final class SettingsStore {
         static let volume: Int = 100
         static let isMuted: Bool = false
         static let isEnabled: Bool = true
+        static let pitchRandomization: Bool = true
     }
 
     /// The current sound profile.
@@ -78,6 +80,19 @@ final class SettingsStore {
         }
     }
 
+    /// Whether pitch randomization is enabled (subtle variation per keystroke).
+    var pitchRandomization: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: Keys.pitchRandomization) == nil {
+                return Defaults.pitchRandomization
+            }
+            return UserDefaults.standard.bool(forKey: Keys.pitchRandomization)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.pitchRandomization)
+        }
+    }
+
     /// Loads all settings and returns them as a tuple.
     /// - Returns: Tuple containing (profile, volume, isMuted, isEnabled).
     func loadAllSettings() -> (profile: SoundProfile, volume: Int, isMuted: Bool, isEnabled: Bool) {
@@ -91,6 +106,7 @@ final class SettingsStore {
         volume = controller.volume
         isMuted = controller.isMuted
         isEnabled = controller.isEnabled
+        pitchRandomization = controller.pitchRandomization
     }
 
     /// Applies stored settings to a controller.
@@ -99,6 +115,7 @@ final class SettingsStore {
         controller.setVolume(volume)
         controller.setMuted(isMuted)
         controller.isEnabled = isEnabled
+        controller.setPitchRandomization(pitchRandomization)
         // Note: Profile is set during controller initialization and changed via setProfile()
     }
 
@@ -108,6 +125,7 @@ final class SettingsStore {
         volume = Defaults.volume
         isMuted = Defaults.isMuted
         isEnabled = Defaults.isEnabled
+        pitchRandomization = Defaults.pitchRandomization
     }
 
     // MARK: - Private Methods

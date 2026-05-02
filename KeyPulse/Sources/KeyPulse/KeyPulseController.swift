@@ -84,6 +84,17 @@ final class KeyPulseController {
         return audioEngine.isMuted
     }
 
+    /// Sets the pitch randomization state.
+    /// - Parameter enabled: Whether to enable ±5% pitch variation per keystroke.
+    func setPitchRandomization(_ enabled: Bool) {
+        audioEngine.isPitchRandomizationEnabled = enabled
+    }
+
+    /// Gets the current pitch randomization state.
+    var pitchRandomization: Bool {
+        return audioEngine.isPitchRandomizationEnabled
+    }
+
     /// Returns the number of samples in the current profile.
     var sampleCount: Int {
         return SoundAssets.samplesPerProfile

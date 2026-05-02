@@ -574,6 +574,7 @@ final class KeyPulseTests: XCTestCase {
         controller1.setVolume(60)
         controller1.setMuted(true)
         controller1.isEnabled = false
+        controller1.setPitchRandomization(false)
 
         // Save settings
         store.saveFromController(controller1)
@@ -589,5 +590,91 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertEqual(controller2.volume, 60)
         XCTAssertTrue(controller2.isMuted)
         XCTAssertFalse(controller2.isEnabled)
+        XCTAssertFalse(controller2.pitchRandomization)
+    }
+
+    // MARK: - Pitch Randomization Tests
+
+    func testAudioEnginePitchRandomizationDisabled() throws {
+        let engine = AudioEngine()
+        try engine.start()
+        defer { engine.stop() }
+
+        try engine.loadProfile(.linear)
+
+        // With pitch randomization disabled, play should work normally
+        engine.isPitchRandomizationEnabled = false
+        XCTAssertNoThrow(try engine.play(sampleIndex: 0))
+    }
+
+    func testAudioEnginePitchRandomizationEnabled() throws {
+        let engine = AudioEngine()
+        try engine.start()
+        defer { engine.stop() }
+
+        try engine.loadProfile(.linear)
+
+        // With pitch randomization enabled, play should work with variation
+        engine.isPitchRandomizationEnabled = true
+        XCTAssertNoThrow(try engine.play(sampleIndex: 0))
+    }
+
+    func testKeyPulseControllerPitchRandomization() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Default should be false (not enabled by controller)
+        XCTAssertFalse(controller.pitchRandomization)
+
+        // Enable pitch randomization
+        controller.setPitchRandomization(true)
+        XCTAssertTrue(controller.pitchRandomization)
+
+        // Disable pitch randomization
+        controller.setPitchRandomization(false)
+        XCTAssertFalse(controller.pitchRandomization)
+    }
+
+    func testSettingsStoreDefaultPitchRandomization() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Default should be true as per US-010 requirements
+        XCTAssertTrue(store.pitchRandomization)
+    }
+
+    func testSettingsStorePitchRandomizationPersistence() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Test saving different states
+        store.pitchRandomization = false
+        XCTAssertFalse(store.pitchRandomization)
+
+        store.pitchRandomization = true
+        XCTAssertTrue(store.pitchRandomization)
+    }
+
+    func testSettingsStoreApplyPitchRandomizationToController() throws {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Set pitch randomization to false in store
+        store.pitchRandomization = false
+
+        // Create controller with default profile
+        let controller = try KeyPulseController(initialProfile: store.profile)
+        defer { controller.stop() }
+
+        // Apply settings to controller
+        store.applyToController(controller)
+
+        // Verify pitch randomization was applied
+        XCTAssertFalse(controller.pitchRandomization)
+
+        // Now enable and re-apply
+        store.pitchRandomization = true
+        store.applyToController(controller)
+        XCTAssertTrue(controller.pitchRandomization)
     }
 }

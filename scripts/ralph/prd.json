@@ -167,8 +167,8 @@
         "Tests pass"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "1B in PRD: pitch randomization chosen as the included nice-to-have (mitigates audio fatigue risk)."
+      "passes": true,
+      "notes": "Pitch randomization implemented using AVAudioPlayerNode.rate property (±5% variation via Float.random(in: 0.95...1.05)). SettingsStore defaults to true. Menu bar UI includes Pitch Variation toggle. 6 new unit tests added. All 52 tests pass."
     },
     {
       "id": "US-011",

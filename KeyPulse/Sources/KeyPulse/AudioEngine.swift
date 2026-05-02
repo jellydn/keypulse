@@ -43,6 +43,12 @@ final class AudioEngine {
     /// Mute state. When true, playback is short-circuited.
     var isMuted = false
 
+    /// Pitch randomization state. When true, playback rate varies by ±5% per keystroke.
+    var isPitchRandomizationEnabled = false
+
+    /// Randomization range for pitch variation (±5% = 0.95 to 1.05).
+    private let pitchRandomizationRange: ClosedRange<Float> = 0.95...1.05
+
     /// The common format used for all audio processing.
     /// Uses the main mixer's input format which is typically stereo @ 44.1kHz or 48kHz.
     private var commonFormat: AVAudioFormat {
@@ -236,6 +242,14 @@ final class AudioEngine {
         playerLock.unlock()
 
         let player = playerNodes[playerIndex]
+
+        // Apply pitch randomization if enabled
+        if isPitchRandomizationEnabled {
+            let rate = Float.random(in: pitchRandomizationRange)
+            player.rate = rate
+        } else {
+            player.rate = 1.0
+        }
 
         // Schedule and play the buffer
         // Using nil for when makes it play immediately (lowest latency)
