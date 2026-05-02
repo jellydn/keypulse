@@ -143,3 +143,21 @@
   - `isEnabled` property allows temporarily disabling sound without stopping monitoring
   - Volume/mute state is delegated to AudioEngine but exposed through controller API for UI binding
 ---
+
+## 2026-05-02 22:15 - US-008
+- **Implemented:** Build menu bar UI (toggle, profile picker, volume slider)
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - New file: Full menu bar UI manager
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Updated to use MenuBarManager
+  - `scripts/ralph/prd.json` - Marked US-008 as passing
+- **Learnings for future iterations:**
+  - MenuBarManager is a dedicated class that encapsulates all menu bar UI logic
+  - Programmatic icon creation using NSImage with drawing handler and isTemplate = true
+  - NSStatusItem.menu uses NSMenu with NSMenuItems containing checkmarks (.state = .on/.off)
+  - Volume slider implemented as NSSlider inside NSMenuItem.view (160x24 container with 128x20 slider)
+  - Profile submenu uses `representedObject` to store profile enum in each menu item
+  - Menu state sync happens via `syncMenuState()` which reads from KeyPulseController
+  - MenuBarManager uses weak reference to controller to avoid retain cycles
+  - Callback pattern for menu actions allows AppDelegate to log/debug if needed
+  - All 32 tests pass, build succeeds with no warnings
+---

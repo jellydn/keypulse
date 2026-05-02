@@ -4,10 +4,17 @@ import Carbon
 class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     private var controller: KeyPulseController?
     private var menuBarManager: MenuBarManager?
+    private let settingsStore = SettingsStore.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupController()
+        applySettingsToController()
         setupMenuBar()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Save settings before quitting
+        saveSettings()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -22,32 +29,40 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
 
         menuBarManager = MenuBarManager(controller: controller)
 
-        // Set up callbacks for menu actions (for logging/debugging)
-        menuBarManager?.onEnabledChanged = { enabled in
+        // Set up callbacks for menu actions with settings persistence
+        menuBarManager?.onEnabledChanged = { [weak self] enabled in
             print("KeyPulse: Enabled state changed to \(enabled)")
+            self?.settingsStore.isEnabled = enabled
         }
 
-        menuBarManager?.onProfileChanged = { profile in
+        menuBarManager?.onProfileChanged = { [weak self] profile in
             print("KeyPulse: Profile changed to \(profile.displayName)")
+            self?.settingsStore.profile = profile
         }
 
-        menuBarManager?.onVolumeChanged = { volume in
+        menuBarManager?.onVolumeChanged = { [weak self] volume in
             print("KeyPulse: Volume changed to \(volume)%")
+            self?.settingsStore.volume = volume
         }
 
-        menuBarManager?.onMuteChanged = { muted in
+        menuBarManager?.onMuteChanged = { [weak self] muted in
             print("KeyPulse: Mute state changed to \(muted)")
+            self?.settingsStore.isMuted = muted
         }
 
-        menuBarManager?.onQuit = {
+        menuBarManager?.onQuit = { [weak self] in
             print("KeyPulse: Quit requested")
+            self?.saveSettings()
         }
     }
 
     private func setupController() {
         do {
-            // Initialize the controller with default linear profile
-            controller = try KeyPulseController(initialProfile: .linear)
+            // Load saved profile or use default
+            let savedProfile = settingsStore.profile
+
+            // Initialize the controller with saved profile
+            controller = try KeyPulseController(initialProfile: savedProfile)
 
             // Set up error handling
             controller?.onError = { error in
@@ -69,5 +84,19 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             print("KeyPulse: Failed to initialize controller: \(error)")
         }
+    }
+
+    private func applySettingsToController() {
+        guard let controller = controller else { return }
+
+        // Apply saved settings to the controller
+        settingsStore.applyToController(controller)
+        print("KeyPulse: Applied saved settings - profile: \(controller.currentProfile.displayName), volume: \(controller.volume)%, muted: \(controller.isMuted), enabled: \(controller.isEnabled)")
+    }
+
+    private func saveSettings() {
+        guard let controller = controller else { return }
+        settingsStore.saveFromController(controller)
+        print("KeyPulse: Settings saved")
     }
 }

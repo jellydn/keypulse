@@ -402,4 +402,192 @@ final class KeyPulseTests: XCTestCase {
         // Test that error handler is set (actual error testing would require simulating an error condition)
         XCTAssertNotNil(controller.onError)
     }
+
+    // MARK: - SettingsStore Tests
+
+    func testSettingsStoreDefaultProfile() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        XCTAssertEqual(store.profile, .linear)
+    }
+
+    func testSettingsStoreProfilePersistence() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Save each profile and verify it persists
+        for profile in SoundProfile.allCases {
+            store.profile = profile
+            XCTAssertEqual(store.profile, profile)
+        }
+    }
+
+    func testSettingsStoreDefaultVolume() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        XCTAssertEqual(store.volume, 100)
+    }
+
+    func testSettingsStoreVolumePersistence() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Test saving different volume levels
+        store.volume = 50
+        XCTAssertEqual(store.volume, 50)
+
+        store.volume = 0
+        XCTAssertEqual(store.volume, 0)
+
+        store.volume = 100
+        XCTAssertEqual(store.volume, 100)
+    }
+
+    func testSettingsStoreVolumeClamping() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Test that volume is clamped to 0-100 range
+        store.volume = 150
+        XCTAssertEqual(store.volume, 100)
+
+        store.volume = -50
+        XCTAssertEqual(store.volume, 0)
+    }
+
+    func testSettingsStoreDefaultMute() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        XCTAssertFalse(store.isMuted)
+    }
+
+    func testSettingsStoreMutePersistence() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        store.isMuted = true
+        XCTAssertTrue(store.isMuted)
+
+        store.isMuted = false
+        XCTAssertFalse(store.isMuted)
+    }
+
+    func testSettingsStoreDefaultEnabled() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        XCTAssertTrue(store.isEnabled)
+    }
+
+    func testSettingsStoreEnabledPersistence() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        store.isEnabled = false
+        XCTAssertFalse(store.isEnabled)
+
+        store.isEnabled = true
+        XCTAssertTrue(store.isEnabled)
+    }
+
+    func testSettingsStoreLoadAllSettings() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        let settings = store.loadAllSettings()
+        XCTAssertEqual(settings.profile, .linear)
+        XCTAssertEqual(settings.volume, 100)
+        XCTAssertFalse(settings.isMuted)
+        XCTAssertTrue(settings.isEnabled)
+    }
+
+    func testSettingsStoreResetToDefaults() {
+        let store = SettingsStore.shared
+
+        // Change all settings to non-default values
+        store.profile = .clicky
+        store.volume = 75
+        store.isMuted = true
+        store.isEnabled = false
+
+        // Reset to defaults
+        store.resetToDefaults()
+
+        XCTAssertEqual(store.profile, .linear)
+        XCTAssertEqual(store.volume, 100)
+        XCTAssertFalse(store.isMuted)
+        XCTAssertTrue(store.isEnabled)
+    }
+
+    func testSettingsStoreSaveFromController() throws {
+        let store = SettingsStore.shared
+        let controller = try KeyPulseController(initialProfile: .tactile)
+        defer { controller.stop() }
+
+        // Modify controller state
+        controller.setVolume(75)
+        controller.setMuted(true)
+        controller.isEnabled = false
+
+        // Save to settings store
+        store.saveFromController(controller)
+
+        // Verify settings were saved
+        XCTAssertEqual(store.profile, .tactile)
+        XCTAssertEqual(store.volume, 75)
+        XCTAssertTrue(store.isMuted)
+        XCTAssertFalse(store.isEnabled)
+    }
+
+    func testSettingsStoreApplyToController() throws {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Set non-default values in store
+        store.profile = .clicky
+        store.volume = 25
+        store.isMuted = true
+        store.isEnabled = false
+
+        // Create controller with default profile (store profile will be applied separately)
+        let controller = try KeyPulseController(initialProfile: store.profile)
+        defer { controller.stop() }
+
+        // Apply settings to controller
+        store.applyToController(controller)
+
+        // Verify controller state
+        XCTAssertEqual(controller.volume, 25)
+        XCTAssertTrue(controller.isMuted)
+        XCTAssertFalse(controller.isEnabled)
+    }
+
+    func testSettingsStoreRoundTrip() throws {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Create and modify controller
+        let controller1 = try KeyPulseController(initialProfile: .clicky)
+        controller1.setVolume(60)
+        controller1.setMuted(true)
+        controller1.isEnabled = false
+
+        // Save settings
+        store.saveFromController(controller1)
+        controller1.stop()
+
+        // Create new controller and load settings
+        let controller2 = try KeyPulseController(initialProfile: store.profile)
+        defer { controller2.stop() }
+        store.applyToController(controller2)
+
+        // Verify settings persisted
+        XCTAssertEqual(controller2.currentProfile, .clicky)
+        XCTAssertEqual(controller2.volume, 60)
+        XCTAssertTrue(controller2.isMuted)
+        XCTAssertFalse(controller2.isEnabled)
+    }
 }
