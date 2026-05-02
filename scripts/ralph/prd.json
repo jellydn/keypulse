@@ -25,6 +25,8 @@
       "acceptanceCriteria": [
         "Add `Resources/Sounds/` group containing folders: `linear/`, `tactile/`, `clicky/`",
         "Each profile folder has at least 4 short WAV samples (16-bit, 44.1kHz, < 100ms)",
+        "Samples sourced from free / CC0 packs, choosing the highest available audio quality",
+        "Add `Resources/Sounds/CREDITS.md` listing source, license, and any attribution",
         "Samples are added to the app target's Copy Bundle Resources phase",
         "Add a `SoundAssets` enum that resolves bundle URLs for each profile",
         "Unit test verifies all sample URLs resolve and files exist",
@@ -33,7 +35,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": "Use placeholder/CC0 samples if no curated set is available."
+      "notes": "Free CC0 samples only. Prioritize audio quality over quantity."
     },
     {
       "id": "US-003",
@@ -77,7 +79,7 @@
       "acceptanceCriteria": [
         "Create `KeyPulseController` that owns `KeyboardMonitor` + `AudioEngine`",
         "On each key-down, controller picks a random sample from the current profile and calls `AudioEngine.play(...)`",
-        "Modifier-only key events (pure shift/cmd/option/ctrl with no other key) optionally suppressed (config flag, default on)",
+        "All key-down events trigger sound, including modifier-only keys (shift/cmd/option/ctrl) - no suppression",
         "Manual verification: launch app, type in any app, hear a sound per keystroke with no audible lag",
         "Unit test for sample-selection rotation logic",
         "Typecheck passes",

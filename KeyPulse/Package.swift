@@ -10,9 +10,16 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "KeyPulse",
+            resources: [
+                .process("Resources")
+            ],
             linkerSettings: [
                 .linkedFramework("Carbon")
             ]
+        ),
+        .testTarget(
+            name: "KeyPulseTests",
+            dependencies: ["KeyPulse"]
         )
     ]
 )

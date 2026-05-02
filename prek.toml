@@ -1,0 +1,37 @@
+# Pre-commit configuration for KeyPulse Swift project
+# https://github.com/davebcn87/prek
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v4.5.0"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+[[repos.hooks]]
+id = "check-yaml"
+
+[[repos.hooks]]
+id = "check-added-large-files"
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "swift-build"
+name = "Swift Build"
+entry = "cd KeyPulse && swift build"
+language = "system"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "swift-test"
+name = "Swift Tests"
+entry = "cd KeyPulse && swift test"
+language = "system"
+pass_filenames = false
+always_run = true
