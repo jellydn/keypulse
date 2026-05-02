@@ -2,12 +2,12 @@ import AppKit
 import Carbon
 
 class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem?
     private var controller: KeyPulseController?
+    private var menuBarManager: MenuBarManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        setupMenuBar()
         setupController()
+        setupMenuBar()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -15,24 +15,33 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupMenuBar() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem?.button?.title = "KP"
+        guard let controller = controller else {
+            print("KeyPulse: Cannot setup menu bar without controller")
+            return
+        }
 
-        let menu = NSMenu()
+        menuBarManager = MenuBarManager(controller: controller)
 
-        let quitItem = NSMenuItem(
-            title: "Quit KeyPulse",
-            action: #selector(quitApp),
-            keyEquivalent: "q"
-        )
-        quitItem.target = self
-        menu.addItem(quitItem)
+        // Set up callbacks for menu actions (for logging/debugging)
+        menuBarManager?.onEnabledChanged = { enabled in
+            print("KeyPulse: Enabled state changed to \(enabled)")
+        }
 
-        statusItem?.menu = menu
-    }
+        menuBarManager?.onProfileChanged = { profile in
+            print("KeyPulse: Profile changed to \(profile.displayName)")
+        }
 
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
+        menuBarManager?.onVolumeChanged = { volume in
+            print("KeyPulse: Volume changed to \(volume)%")
+        }
+
+        menuBarManager?.onMuteChanged = { muted in
+            print("KeyPulse: Mute state changed to \(muted)")
+        }
+
+        menuBarManager?.onQuit = {
+            print("KeyPulse: Quit requested")
+        }
     }
 
     private func setupController() {
