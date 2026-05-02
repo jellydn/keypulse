@@ -10,6 +10,10 @@
 - Use `kCGEventTapOptionListenOnly` for passive monitoring without intercepting events
 - Accessibility permission check: `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: false])`
 - Pass `self` to C callbacks via `Unmanaged.passUnretained(self).toOpaque()` and convert back with `fromOpaque().takeUnretainedValue()`
+- KeyPulseController acts as the central coordinator between KeyboardMonitor and AudioEngine
+- Random sample selection for variety: `Int.random(in: 0..<SoundAssets.samplesPerProfile)`
+- KeyPulseController must be retained by AppDelegate to prevent deallocation
+- Always check accessibility permission before starting keyboard monitoring
 
 ## 2026-05-02 21:18 - US-001
 - **Implemented:** Scaffold Swift macOS menu bar app project
@@ -73,4 +77,22 @@
   - Open System Settings to Accessibility panel via `NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:...")`
   - Need to import AppKit for NSWorkspace in addition to CoreGraphics/Carbon
   - CFRunLoopGetMain() is used for the event tap run loop source (not .current)
+---
+
+## 2026-05-02 21:32 - US-005
+- **Implemented:** Wire keystroke events to audio playback
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/KeyPulseController.swift` - New central controller class (162 lines)
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Added controller initialization and setup
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 8 unit tests for KeyPulseController
+  - `scripts/ralph/prd.json` - Marked US-005 as complete
+- **Learnings for future iterations:**
+  - KeyPulseController owns both KeyboardMonitor and AudioEngine instances
+  - Controller implements `onKeyDown` callback that selects random sample and calls `AudioEngine.play()`
+  - All key-down events trigger sound (including modifiers) - no filtering applied
+  - Random sample selection uses `Int.random(in: 0..<SoundAssets.samplesPerProfile)` for variety
+  - Controller must be retained as a property in AppDelegate to prevent deallocation
+  - Error handling via `onError` callback for production error reporting
+  - `isEnabled` property allows temporarily disabling sound without stopping monitoring
+  - Volume/mute state is delegated to AudioEngine but exposed through controller API for UI binding
 ---
