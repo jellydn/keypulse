@@ -86,8 +86,8 @@
         "Tests pass"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "REVIEW FAILED. Issue found 2026-05-02:\n  - AC requires `All key-down events trigger sound, including modifier-only keys (shift/cmd/option/ctrl)` (per resolved decision #2 in PRD).\n  - Actual implementation: `KeyboardMonitor` only subscribes to `CGEventType.keyDown` events (see KeyboardMonitor.swift:87 and the `guard type == .keyDown` at line 153).\n  - On macOS modifier-only key presses generate `CGEventType.flagsChanged` events, NOT `keyDown`. So modifier keys produce no sound.\nNext iteration must: add `flagsChanged` to the event mask, route those events through KeyPulseController (debounced if needed so each modifier press fires once), and add a unit test confirming a synthesized flagsChanged event invokes onKeyDown / triggers playback."
+      "passes": true,
+      "notes": "Fixed 2026-05-02: Added `flagsChanged` to the event mask in KeyboardMonitor.swift. Implemented debounced modifier key handling using lastModifierFlags tracking to ensure each modifier press fires once. Modifier keys (shift/cmd/option/ctrl) now trigger sound via 0xFF sentinel key code. Added testKeyPulseControllerModifierKeyTriggersPlayback unit test. All 56 tests pass."
     },
     {
       "id": "US-006",

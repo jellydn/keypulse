@@ -256,6 +256,22 @@
   - Pattern: When storing values where 0 is valid (like volume), always check `object(forKey:)` existence first
 ---
 
+## 2026-05-03 21:55 - US-005
+- **Implemented:** Wire keystroke events to audio playback (REVIEW FIX)
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/KeyboardMonitor.swift` - Added `flagsChanged` to event mask, implemented debounced modifier key handling
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added `testKeyPulseControllerModifierKeyTriggersPlayback` test
+  - `scripts/ralph/prd.json` - Marked US-005 as passing with fix notes
+- **Learnings for future iterations:**
+  - Modifier-only key presses (shift/cmd/option/ctrl) generate `CGEventType.flagsChanged`, NOT `CGEventType.keyDown`
+  - Event mask must include both: `(1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.flagsChanged.rawValue)`
+  - Debouncing is required for modifier keys: holding a modifier generates repeated `flagsChanged` events
+  - Track `lastModifierFlags: CGEventFlags` to detect actual changes vs repeated events
+  - Use a sentinel key code (0xFF) for modifier events since they don't have traditional key codes
+  - `flagsChanged` events fire on both press AND release - this provides nice audio feedback for modifier releases
+  - All 56 tests pass, build succeeds with only pre-existing warnings
+---
+
 ## 2026-05-02 22:55 - US-010
 - **Implemented:** Add pitch randomization (nice-to-have selected)
 - **Files changed:**

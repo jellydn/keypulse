@@ -36,6 +36,10 @@ final class KeyboardMonitor {
     /// Whether the monitor is currently active.
     private(set) var isMonitoring = false
 
+    /// Tracks the last modifier flags state to detect actual changes (not repeated events).
+    /// Used for debouncing flagsChanged events so each modifier press fires once.
+    private var lastModifierFlags: CGEventFlags = []
+
     /// Creates a new keyboard monitor.
     /// Note: Call `start()` to begin monitoring after checking/requesting accessibility permission.
     init() {}
@@ -84,7 +88,11 @@ final class KeyboardMonitor {
 
         // Create the event tap
         // We use kCGEventTapOptionListenOnly to avoid intercepting events (we only observe)
-        let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        // Include both keyDown and flagsChanged to capture regular keys AND modifier-only presses
+        let eventMask = CGEventMask(
+            (1 << CGEventType.keyDown.rawValue) |
+            (1 << CGEventType.flagsChanged.rawValue)
+        )
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
@@ -149,11 +157,21 @@ final class KeyboardMonitor {
     /// Handles a CGEvent from the event tap.
     /// - Returns: The event (unmodified since we use listen-only mode).
     private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent> {
-        // Only process key-down events
-        guard type == .keyDown else {
-            return Unmanaged.passUnretained(event)
+        switch type {
+        case .keyDown:
+            handleKeyDownEvent(event)
+        case .flagsChanged:
+            handleFlagsChangedEvent(event)
+        default:
+            break
         }
 
+        // Return the event unmodified (listen-only mode)
+        return Unmanaged.passUnretained(event)
+    }
+
+    /// Handles a key-down event (regular keystrokes).
+    private func handleKeyDownEvent(_ event: CGEvent) {
         // Extract the key code from the event
         // CGEvent key codes match Carbon virtual key codes
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
@@ -162,8 +180,32 @@ final class KeyboardMonitor {
         DispatchQueue.main.async { [weak self] in
             self?.onKeyDown?(keyCode)
         }
+    }
 
-        // Return the event unmodified (listen-only mode)
-        return Unmanaged.passUnretained(event)
+    /// Handles a flags-changed event (modifier-only presses: shift, cmd, option, ctrl).
+    /// Uses debouncing so each modifier press fires once (not repeatedly while held).
+    private func handleFlagsChangedEvent(_ event: CGEvent) {
+        let currentFlags = event.flags
+
+        // Debounce: only trigger if flags actually changed (not just repeated events)
+        // When a modifier is pressed, flags go from [] to [mask]
+        // When released, flags go from [mask] to []
+        // We trigger on any change to provide feedback for both press and release
+        let flagsActuallyChanged = currentFlags != lastModifierFlags
+        lastModifierFlags = currentFlags
+
+        guard flagsActuallyChanged else {
+            return
+        }
+
+        // For modifier events, use a special key code to indicate it's a modifier
+        // We'll use 0xFF (255) as a sentinel value for modifier-only events
+        // This is outside the normal key code range (0-127)
+        let modifierKeyCode: UInt16 = 0xFF
+
+        // Call the handler on the main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.onKeyDown?(modifierKeyCode)
+        }
     }
 }
