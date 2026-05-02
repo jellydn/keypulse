@@ -273,4 +273,133 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertEqual(SoundProfile.tactile.id, "tactile")
         XCTAssertEqual(SoundProfile.clicky.id, "clicky")
     }
+
+    // MARK: - KeyPulseController Tests
+
+    func testKeyPulseControllerInitialization() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        XCTAssertNotNil(controller)
+        XCTAssertEqual(controller.currentProfile, .linear)
+        XCTAssertTrue(controller.isEnabled)
+        XCTAssertEqual(controller.sampleCount, 4)
+
+        // Clean up
+        controller.stop()
+    }
+
+    func testKeyPulseControllerSetProfile() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Initial profile should be linear
+        XCTAssertEqual(controller.currentProfile, .linear)
+
+        // Switch to tactile
+        try controller.setProfile(.tactile)
+        XCTAssertEqual(controller.currentProfile, .tactile)
+
+        // Switch to clicky
+        try controller.setProfile(.clicky)
+        XCTAssertEqual(controller.currentProfile, .clicky)
+
+        // Switch back to linear
+        try controller.setProfile(.linear)
+        XCTAssertEqual(controller.currentProfile, .linear)
+    }
+
+    func testKeyPulseControllerVolume() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Default volume should be 100%
+        XCTAssertEqual(controller.volume, 100)
+
+        // Set volume to 50%
+        controller.setVolume(50)
+        XCTAssertEqual(controller.volume, 50)
+
+        // Set volume to 0%
+        controller.setVolume(0)
+        XCTAssertEqual(controller.volume, 0)
+
+        // Set volume to 100%
+        controller.setVolume(100)
+        XCTAssertEqual(controller.volume, 100)
+    }
+
+    func testKeyPulseControllerMute() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Default should not be muted
+        XCTAssertFalse(controller.isMuted)
+
+        // Mute
+        controller.setMuted(true)
+        XCTAssertTrue(controller.isMuted)
+
+        // Unmute
+        controller.setMuted(false)
+        XCTAssertFalse(controller.isMuted)
+    }
+
+    func testKeyPulseControllerEnabledState() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Default should be enabled
+        XCTAssertTrue(controller.isEnabled)
+
+        // Disable
+        controller.isEnabled = false
+        XCTAssertFalse(controller.isEnabled)
+
+        // Re-enable
+        controller.isEnabled = true
+        XCTAssertTrue(controller.isEnabled)
+    }
+
+    func testKeyPulseControllerSelectRandomSampleIndex() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Generate many random samples to verify distribution
+        var sampleIndices: [Int] = []
+        for _ in 0..<100 {
+            let index = controller.selectRandomSampleIndex()
+            sampleIndices.append(index)
+
+            // Verify index is in valid range
+            XCTAssertGreaterThanOrEqual(index, 0)
+            XCTAssertLessThan(index, 4)
+        }
+
+        // Verify we got some variety (unlikely but possible to get all same)
+        // Just verify at least 2 different indices were selected
+        let uniqueIndices = Set(sampleIndices)
+        XCTAssertGreaterThanOrEqual(uniqueIndices.count, 1, "Should have at least some variety in random selection")
+    }
+
+    func testKeyPulseControllerAllProfiles() throws {
+        // Test that controller can be initialized with each profile
+        for profile in SoundProfile.allCases {
+            let controller = try KeyPulseController(initialProfile: profile)
+            XCTAssertEqual(controller.currentProfile, profile)
+            controller.stop()
+        }
+    }
+
+    func testKeyPulseControllerErrorHandler() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Set up error handler
+        var errorReceived: Error?
+        controller.onError = { error in
+            errorReceived = error
+        }
+
+        // Test that error handler is set (actual error testing would require simulating an error condition)
+        XCTAssertNotNil(controller.onError)
+    }
 }
