@@ -28,6 +28,27 @@
   - Launch at Login UI uses same pattern as other toggles; checkmark reflects SMAppService status
   - App maintains LSUIElement = YES (no Dock icon) for set-and-forget experience
 
+## 2026-05-02 23:07 - US-012
+- **Implemented:** Configure signing, notarization, and TestFlight build
+- **Files changed:**
+  - `KeyPulse/KeyPulse.entitlements` - Hardened runtime entitlements with minimal permissions (no mic, no network)
+  - `KeyPulse/ExportOptions.plist` - App Store export configuration with placeholder team ID
+  - `scripts/build-release.sh` - Full release build script with xcodebuild archive/export, signing verification
+  - `README.md` - Comprehensive TestFlight documentation (upload methods, troubleshooting, verification commands)
+  - `scripts/ralph/prd.json` - Marked US-012 as passing
+- **Learnings for future iterations:**
+  - SwiftPM apps need hardened runtime entitlements file referenced during archive; CGEventTap does NOT require a specific entitlement
+  - Accessibility permission is granted at runtime via user prompt, not via entitlements
+  - ServiceManagement for launch-at-login uses SMAppService (no entitlement needed)
+  - ExportOptions.plist requires teamID; use "YOUR_TEAM_ID_HERE" as placeholder for development
+  - Audio playback apps don't need microphone entitlements - only audio output
+  - `ENABLE_HARDENED_RUNTIME=YES` and `CODE_SIGN_ENTITLEMENTS` flags needed in xcodebuild
+  - App Store export uses method=app-store; TestFlight uses same path
+  - Three upload methods documented: Xcode Organizer (easiest), Transporter CLI, altool legacy
+  - Build script supports both SwiftPM direct build and Xcode project workflows
+  - 55 tests pass, build succeeds with no warnings, pre-commit hook handles trailing whitespace
+---
+
 ## 2026-05-02 23:05 - US-011
 - **Implemented:** Add launch-at-login and background runtime polish
 - **Files changed:**

@@ -198,8 +198,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": "4D in PRD: TestFlight beta first."
+      "passes": true,
+      "notes": "All acceptance criteria met: Bundle ID com.keypulse.app and version 0.1.0 in Info.plist; KeyPulse.entitlements with hardened runtime config (minimal entitlements since no mic/audio input needed); ExportOptions.plist for App Store distribution; build-release.sh for archiving and export; comprehensive TestFlight documentation added to README.md; 55 tests pass."
     }
   ]
 }
