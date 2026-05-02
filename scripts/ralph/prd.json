@@ -118,8 +118,8 @@
         "Tests pass"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AudioEngine exposes volume: Float (0.0-1.0) with automatic clamping. isMuted short-circuits playback in play() method. KeyPulseController provides setVolume(_ percent: Int) (0-100) and setMuted(_:) methods. Unit tests verify volume clamping, percentage conversion, and mute behavior. All 32 tests pass."
     },
     {
       "id": "US-008",

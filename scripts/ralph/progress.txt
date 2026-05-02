@@ -12,6 +12,40 @@
 - Pass `self` to C callbacks via `Unmanaged.passUnretained(self).toOpaque()` and convert back with `fromOpaque().takeUnretainedValue()`
 - KeyPulseController acts as the central coordinator between KeyboardMonitor and AudioEngine
 - Random sample selection for variety: `Int.random(in: 0..<SoundAssets.samplesPerProfile)`
+- KeyPulseController must be retained by AppDelegate to prevent deallocation
+- Always check accessibility permission before starting keyboard monitoring
+- AudioEngine.volume uses didSet observer for automatic clamping (0.0-1.0 range)
+- AudioEngine.isMuted short-circuits playback at the start of play() method (no buffer scheduling when muted)
+- KeyPulseController.setVolume(_ percent: Int) converts percentage (0-100) to Float for AudioEngine
+- Update volume on all player nodes via loop in updateVolume() method
+
+## 2026-05-02 22:00 - US-007
+- **Implemented:** Add volume control and mute toggle
+- **Files changed:**
+  - `scripts/ralph/prd.json` - Marked US-007 as passing
+- **Learnings for future iterations:**
+  - AudioEngine.volume property uses didSet observer for automatic clamping to 0.0-1.0 range
+  - AudioEngine.isMuted short-circuits playback at the very start of play() method - no buffer scheduling when muted
+  - KeyPulseController.setVolume(_ percent: Int) converts 0-100 percentage to 0.0-1.0 Float for AudioEngine
+  - Volume is applied per-player-node before each play() call, and updateVolume() updates all nodes
+  - All 32 tests pass including testAudioEngineVolume, testAudioEngineMute, testKeyPulseControllerVolume, testKeyPulseControllerMute
+  - No code changes needed - functionality was fully implemented in previous stories
+---
+
+## Codebase Patterns
+- SwiftPM-based macOS app project structure
+- Build with: `cd KeyPulse && xcodebuild -scheme KeyPulse -destination 'platform=macOS' build`
+- Alternative build: `cd KeyPulse && swift build`
+- LSUIElement apps use `NSStatusBar.system` (not `.shared`)
+- Import AppKit + Carbon for macOS menu bar apps
+- SwiftPM `.process()` flattens resource directory structure - use unique filenames across all resources
+- Use `Bundle.module.url(forResource:withExtension:)` to access SwiftPM bundled resources
+- CGEventTap is preferred over IOHIDManager for global keyboard monitoring (simpler API, no device enumeration)
+- Use `kCGEventTapOptionListenOnly` for passive monitoring without intercepting events
+- Accessibility permission check: `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: false])`
+- Pass `self` to C callbacks via `Unmanaged.passUnretained(self).toOpaque()` and convert back with `fromOpaque().takeUnretainedValue()`
+- KeyPulseController acts as the central coordinator between KeyboardMonitor and AudioEngine
+- Random sample selection for variety: `Int.random(in: 0..<SoundAssets.samplesPerProfile)`
   - KeyPulseController must be retained by AppDelegate to prevent deallocation
   - Always check accessibility permission before starting keyboard monitoring
 
