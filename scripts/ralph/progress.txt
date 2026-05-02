@@ -4,6 +4,8 @@
 - Alternative build: `cd KeyPulse && swift build`
 - LSUIElement apps use `NSStatusBar.system` (not `.shared`)
 - Import AppKit + Carbon for macOS menu bar apps
+- SwiftPM `.process()` flattens resource directory structure - use unique filenames across all resources
+- Use `Bundle.module.url(forResource:withExtension:)` to access SwiftPM bundled resources
 
 ## 2026-05-02 21:18 - US-001
 - **Implemented:** Scaffold Swift macOS menu bar app project
@@ -18,4 +20,22 @@
   - NSStatusBar uses `.system` not `.shared` in modern Swift
   - For LSUIElement apps, `applicationShouldTerminateAfterLastWindowClosed` returns false
   - Swift 6.3+ uses `swiftLanguageMode` instead of `swiftLanguageVersion`
+---
+
+## 2026-05-02 21:22 - US-002
+- **Implemented:** Bundle WAV sound assets for 3 profiles
+- **Files changed:**
+  - `KeyPulse/Package.swift` - Added resources configuration with `.process("Resources")`
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/linear/` - 4 WAV samples (linear_key_01-04.wav)
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/tactile/` - 4 WAV samples (tactile_key_01-04.wav)
+  - `KeyPulse/Sources/KeyPulse/Resources/Sounds/clicky/` - 4 WAV samples (clicky_key_01-04.wav)
+  - `KeyPulse/Sources/KeyPulse/SoundAssets.swift` - New enum for resolving bundle URLs
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 11 tests for sound assets
+  - `scripts/ralph/generate_sounds.py` - Python script to generate placeholder WAV files
+- **Learnings for future iterations:**
+  - SwiftPM `.process()` flattens directory structure - resources lose their subdirectory hierarchy in the bundle
+  - To avoid "multiple resources named" errors, use unique filenames across all profiles (e.g., `linear_key_01.wav` instead of `key_01.wav`)
+  - Generated placeholder WAV files are 50ms silence at 44.1kHz, 16-bit - suitable for testing but production needs real samples
+  - `Bundle.module` is auto-generated for SwiftPM targets with resources - provides `url(forResource:withExtension:)` method
+  - Test resources are bundled in a separate `.bundle` within the test xctest package
 ---

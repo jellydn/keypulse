@@ -38,3 +38,11 @@ No npm/bun/pip — this is a pure Swift/Xcode project.
 - Audio latency target: <20ms trigger-to-output (pre-load buffers into `AVAudioPCMBuffer`)
 - Pitch randomization: ±5% via `AVAudioUnitTimePitch`
 - Launch-at-login uses `SMAppService.mainApp` (macOS 13+ API, no LSSharedFileList)
+
+## Resource Handling (SwiftPM)
+
+- Use `.process("Resources")` in Package.swift to bundle resources
+- **Important**: SwiftPM flattens directory structure - subdirectory hierarchy is lost in the final bundle
+- Use unique filenames across all resources (e.g., `linear_key_01.wav` not `key_01.wav` in multiple folders)
+- Access resources via `Bundle.module.url(forResource:withExtension:)` - auto-generated for targets with resources
+- Resource bundle is separate from executable; tests use `KeyPulse_KeyPulse.bundle` within the xctest package
