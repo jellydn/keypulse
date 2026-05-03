@@ -206,7 +206,8 @@ final class KeyPulseController: ObservableObject {
     }
 
     /// Returns a human-readable name for a key code.
-    private func keyCodeDisplayName(_ keyCode: UInt16) -> String {
+    /// Internal for performance testing; logically a pure function with no side effects.
+    func keyCodeDisplayName(_ keyCode: UInt16) -> String {
         if keyCode == 0xFF {
             return "Modifier (flagsChanged)"
         }
