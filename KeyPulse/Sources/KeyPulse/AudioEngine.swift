@@ -42,6 +42,9 @@ final class AudioEngine {
     /// Whether the engine is currently running.
     private(set) var isRunning = false
 
+    /// Observer token for audio engine configuration changes (route changes, sample rate).
+    private var configChangeObserver: NSObjectProtocol?
+
     /// Volume level (0.0 to 1.0).
     var volume: Float = 1.0 {
         didSet {
@@ -110,14 +113,64 @@ final class AudioEngine {
             try engine.start()
             isRunning = true
             updateVolume()
+
+            // Register for audio configuration changes (headphones, Bluetooth, sample rate)
+            registerConfigurationObserver()
         } catch {
             throw AudioEngineError.engineStartFailed
+        }
+    }
+
+    /// Registers for AVAudioEngineConfigurationChange notifications.
+    /// When the audio route changes (headphones plugged/unplugged, Bluetooth device),
+    /// the engine's format may change, making pre-converted buffers incompatible.
+    /// We restart the engine and clear caches to re-convert buffers to the new format.
+    private func registerConfigurationObserver() {
+        configChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, self.isRunning else { return }
+
+            Logger.audioEngine.info("Audio configuration changed — restarting engine")
+
+            // Remember current profile to reload after restart
+            let savedProfile = self.currentProfile
+
+            // Stop and restart the engine with the new format
+            self.engine.stop()
+
+            // Clear caches — buffers were converted to the old format
+            self.buffers.removeAll()
+            self.profileCache.removeAll()
+            self.isPreWarmed = false
+
+            do {
+                try self.engine.start()
+                Logger.audioEngine.info("Engine restarted after configuration change")
+
+                // Re-load the current profile (re-converts buffers to new format)
+                if let profile = savedProfile {
+                    try self.loadProfile(profile)
+                    Logger.audioEngine.info("Profile '\(profile.rawValue)' reloaded with new format")
+                }
+            } catch {
+                Logger.audioEngine.error("Failed to restart engine after configuration change: \(error.localizedDescription)")
+                self.isRunning = false
+            }
         }
     }
 
     /// Stops the audio engine and releases player nodes.
     func stop() {
         guard isRunning else { return }
+
+        // Remove configuration observer
+        if let observer = configChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            configChangeObserver = nil
+        }
 
         // Stop all player nodes
         for player in playerNodes {
