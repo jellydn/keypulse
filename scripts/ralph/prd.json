@@ -251,8 +251,8 @@
         "Tests pass"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": "Pair with US-015 (richer menu tray). Reuse SettingsStore as the single source of truth - do NOT duplicate state into view models. Make SettingsStore conform to ObservableObject and bind via @StateObject in SwiftUI."
+      "passes": true,
+      "notes": "SettingsStore conforms to ObservableObject with objectWillChange.send() in all setters. PreferencesWindowController uses SwiftUI inside NSHostingController with TabView (General/Sounds/Advanced). All controls bind to SettingsStore via @ObservedObject. Menu bar syncs via onSettingsChanged callback → menuBarManager.refresh(). Show Debug Window from Advanced tab via NotificationCenter. 5 new unit tests added. All 135 tests pass."
     },
     {
       "id": "US-015",

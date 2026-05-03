@@ -3,17 +3,19 @@ import Foundation
 import os.lock
 @testable import KeyPulse
 
-/// Performance test for player selection lock
-/// Measures the time to acquire lock and increment index using actual AudioEngine
+/// Performance benchmark for os_unfair_lock acquisition.
+/// Note: AudioEngine.play() no longer uses a lock — all callers arrive via
+/// DispatchQueue.main.async, making synchronization unnecessary.
+/// This test remains as a general os_unfair_lock performance reference.
 final class LockPerformanceTest: XCTestCase {
 
+    /// Benchmarks os_unfair_lock acquire/release overhead.
+    /// Creates a single lock (matching the pattern of a shared lock)
+    /// and measures uncontended acquisition time.
     func measureAudioEngineLock() -> Double {
-        let engine = AudioEngine()
         let iterations = 1_000_000
 
-        // Create the lock once (like AudioEngine does) — the original test
-        // incorrectly created a new lock inside the loop, measuring stack allocation
-        // instead of actual lock acquisition overhead.
+        // Create the lock once (like a shared instance would)
         var playerLock = os_unfair_lock()
         var nextPlayerIndex = 0
         let concurrentPlayerCount = 8

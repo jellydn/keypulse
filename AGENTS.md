@@ -36,9 +36,20 @@ Alternative: `xcodebuild -scheme KeyPulse` works from `KeyPulse/` too.
 
 Shortcut: `Cmd+Opt+D`. Floating SwiftUI window (360x420, NSHostingController). Combine binding throttled to 10Hz.
 
+## Preferences Window
+
+Shortcut: `Cmd+,`. SwiftUI window (480x360, non-resizable, NSHostingController). TabView with General/Sounds/Advanced tabs. All controls bind to `SettingsStore` (ObservableObject) as single source of truth. Settings changes propagate to menu bar via `onSettingsChanged` → `menuBarManager.refresh()`.
+
+## SettingsStore as ObservableObject
+
+- `SettingsStore` conforms to `ObservableObject` for SwiftUI binding via `@ObservedObject`
+- All setters call `objectWillChange.send()` before persisting to UserDefaults
+- `@ObservedObject var settings: SettingsStore` used in PreferencesView, NOT `@StateObject` (singleton)
+- Menu bar ↔ Preferences sync: menu bar changes call SettingsStore setters (which publish), Preferences window updates via `@ObservedObject`; Preferences changes call `onSettingsChanged` callback which invokes `menuBarManager.refresh()`
+
 ## Ralph Autonomous Development
 
-`scripts/ralph/prd.json` defines user stories — **all 13 stories pass** (MVP complete). Active branch: `ralph/keypulse-mvp`. If adding new stories, update `passes: false` and follow commit format `feat: [Story ID] - [Title]`.
+`scripts/ralph/prd.json` defines user stories — **all 15 stories pass** (MVP complete). Active branch: `ralph/keypulse-mvp`. If adding new stories, update `passes: false` and follow commit format `feat: [Story ID] - [Title]`.
 
 Pre-commit runs `swift build` + `swift test` via `prek` (prek.toml).
 
