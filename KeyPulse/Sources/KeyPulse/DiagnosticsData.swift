@@ -47,6 +47,10 @@ struct DiagnosticsData {
     var isMuted: Bool = false
     var isPitchVariationEnabled: Bool = true
 
+    /// Whether secure input (password fields, credit card forms) is currently detected.
+    /// When true, keystroke sounds are suppressed to protect user privacy.
+    var isSecureInputDetected: Bool = false
+
     /// App and system info (read dynamically from Bundle.main)
     var bundleIdentifier: String = DiagnosticsData.bundleString(kCFBundleIdentifierKey as String, fallback: "com.keypulse.app")
     var appVersion: String = DiagnosticsData.bundleString("CFBundleShortVersionString", fallback: "0.1.0")
@@ -85,6 +89,7 @@ struct DiagnosticsData {
         - Volume: \(volumePercent)%
         - Muted: \(isMuted ? "Yes" : "No")
         - Pitch Variation: \(isPitchVariationEnabled ? "On" : "Off")
+        - Secure Input: \(isSecureInputDetected ? "Yes (sounds suppressed)" : "No")
         - Enabled: \(isEnabled ? "Yes" : "No")
 
         Modifier Flags:
@@ -121,6 +126,7 @@ extension DiagnosticsData: Equatable {
         lhs.volumePercent == rhs.volumePercent &&
         lhs.isMuted == rhs.isMuted &&
         lhs.isPitchVariationEnabled == rhs.isPitchVariationEnabled &&
+        lhs.isSecureInputDetected == rhs.isSecureInputDetected &&
         lhs.bundleIdentifier == rhs.bundleIdentifier &&
         lhs.appVersion == rhs.appVersion &&
         lhs.buildNumber == rhs.buildNumber &&

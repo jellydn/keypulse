@@ -442,11 +442,8 @@ final class KeyPulseTests: XCTestCase {
 
             // The modifier key handling is tested through the KeyboardMonitor
             // which now includes flagsChanged events in its event mask.
-            // We verify here that the controller accepts the modifier key code (0xFF)
-            // and would play a sound when triggered.
-
-            // Since we can't easily synthesize CGEvent taps in unit tests,
-            // we verify the controller is in a state that would accept events
+            // Modifier events use isLastEventModifier instead of sentinel key code.
+            // We verify here that the controller is in a state that would accept events
             XCTAssertEqual(controller.sampleCount, 4)
         }
     }

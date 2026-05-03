@@ -180,7 +180,7 @@ final class KeyPulseController: ObservableObject {
         diagnosticsData.totalKeystrokes = totalKeystrokes
         diagnosticsData.lastKeyCode = lastKeyCode
         diagnosticsData.isLastKeyModifier = isLastKeyModifier
-        diagnosticsData.lastKeyDisplayName = keyCodeDisplayName(lastKeyCode)
+        diagnosticsData.lastKeyDisplayName = isLastKeyModifier ? "Modifier (flagsChanged)" : keyCodeDisplayName(lastKeyCode)
         diagnosticsData.activeProfile = currentProfile
         diagnosticsData.lastSampleIndex = lastSampleIndex
         diagnosticsData.lastSampleFilename = SoundAssets.sampleURL(for: currentProfile, index: lastSampleIndex)?.lastPathComponent ?? "-"
@@ -190,6 +190,9 @@ final class KeyPulseController: ObservableObject {
         diagnosticsData.latencyMinMs = audioEngine.minLatency * 1000
         diagnosticsData.latencyMaxMs = audioEngine.maxLatency * 1000
         diagnosticsData.latencySampleCount = audioEngine.latencyMeasurementCount
+
+        // Security state
+        diagnosticsData.isSecureInputDetected = keyboardMonitor.isSecureInputDetected
 
         // Settings state
         diagnosticsData.volumePercent = volume
@@ -205,9 +208,6 @@ final class KeyPulseController: ObservableObject {
     /// Returns a human-readable name for a key code.
     /// Internal for performance testing; logically a pure function with no side effects.
     func keyCodeDisplayName(_ keyCode: UInt16) -> String {
-        if keyCode == 0xFF {
-            return "Modifier (flagsChanged)"
-        }
         // Common key code mappings
         switch keyCode {
         case 0: return "A"

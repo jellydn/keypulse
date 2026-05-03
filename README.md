@@ -9,8 +9,8 @@
 
 > Make any keyboard feel satisfying.
 
-[![Swift](https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift)](https://swift.org)
-[![macOS](https://img.shields.io/badge/macOS-13+-000000?logo=macos)](https://developer.apple.com/macos)
+[![Swift](https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white)](https://swift.org)
+[![macOS](https://img.shields.io/badge/macOS-13+-000000?logo=macos&logoColor=white)](https://developer.apple.com/macos)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A lightweight macOS menu bar app that plays low-latency mechanical keyboard sounds for every keystroke — no extra hardware, no noise in shared offices.
@@ -21,16 +21,12 @@ A lightweight macOS menu bar app that plays low-latency mechanical keyboard soun
 - 🔊 3 sound profiles: Linear, Tactile, Clicky
 - 🎚️ Volume slider with mute toggle
 - 🎲 Pitch randomization for natural feel
-- 📱 System-wide global hook (works in any app)
-- 🍎 Native menu bar UI (no Dock icon)
-- 💾 Persisted settings across sessions
+- 📱 Works system-wide in any app
+- 🍎 Native menu bar UI, no Dock icon
+- 💾 Settings persist across sessions
 - 🚀 Launch at login
 
 ## 📦 Installation
-
-### Download (Coming Soon)
-
-KeyPulse will be available on the [App Store](https://apps.apple.com) and as a notarized DMG.
 
 ### Build from Source
 
@@ -61,32 +57,6 @@ just bundle
 | ----------- | -------------------------------- |
 | `Cmd+,`     | Open Preferences                 |
 | `Cmd+Opt+D` | Toggle Debug Window              |
-| —           | Click menu bar icon for settings |
-
-### Debug Window
-
-The Debug Window provides real-time diagnostics for testing and verification:
-
-- **Keystroke Stats**: Total count, last key code, modifier detection
-- **Profile & Sample**: Active profile, last sample played
-- **Latency Metrics**: Average/min/max with PASS/FAIL indicator (<20ms target)
-- **Modifier Flags**: Live state of Shift, Command, Option, Control
-- **Settings**: Volume, mute state, pitch variation
-- **Actions**: Test Sound, Test All Profiles, Reset Stats, Copy Diagnostics
-
-![Debug Window](docs/debug-window-screenshot.png)
-
-### Preferences Window
-
-The Preferences window (`Cmd+,`) provides a full GUI for configuring KeyPulse settings in a comfortable tabbed interface:
-
-- **General**: `Enabled` toggle and `Launch at Login` toggle
-- **Sounds**: Profile picker (Linear / Tactile / Clicky segmented control), volume slider with percentage label, `Mute` and `Pitch Variation` toggles, and a `Test Sound` button
-- **Advanced**: `Show Debug Window` button, `Reset All Settings` button (with confirmation alert), and version label
-
-All controls stay in sync with the menu bar — changing a setting in Preferences immediately updates the menu bar checkbox/indicator, and vice versa. Settings persist automatically through UserDefaults.
-
-![Preferences Window](docs/preferences-screenshot.png)
 
 ## 🛠️ Development
 
@@ -141,7 +111,7 @@ KeyPulse/
 - **Persistence**: `UserDefaults`
 - **Build**: `just` command runner
 
-## 🤖 Building with Ralph
+### 🤖 Building with Ralph
 
 This repo uses [Ralph](https://github.com/jellydn/ralph) — an autonomous agent loop that implements user stories from `scripts/ralph/prd.json`.
 
@@ -153,16 +123,9 @@ This repo uses [Ralph](https://github.com/jellydn/ralph) — an autonomous agent
 ./scripts/ralph/ralph.sh
 ```
 
-## 🧪 TestFlight Distribution
+### 🧪 TestFlight Distribution
 
-See [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md) for detailed instructions on:
-
-- Code signing setup
-- Building release archives
-- Uploading to App Store Connect
-- Adding internal testers
-
-Quick build:
+See [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md) for code signing, building release archives, and uploading to App Store Connect.
 
 ```bash
 ./scripts/build-release.sh 0.1.0 1
@@ -194,17 +157,32 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## 👤 Author
+
+**Huynh Duc Dung**
+
+- Website: https://productsway.com
+- Twitter: [@jellydn](https://twitter.com/jellydn)
+- GitHub: [@jellydn](https://github.com/jellydn)
+
+## ✨ Contributors
+
+Contributions of any kind welcome!
+
+## 🤲 Show your support
+
+Give a ⭐️ if this project helped you! Support the developer with a donation:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?logo=ko-fi&logoColor=white)](https://ko-fi.com/jellydn)
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.me/jellydn)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/jellydn)
+
 ## 📝 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Copyright © 2025 [Huynh Duc Dung](https://github.com/jellydn).
+This project is [MIT](LICENSE) licensed.
 
 Sound assets are bundled under compatible licenses (CC0 or owner-licensed).
-
-## 🙏 Acknowledgments
-
-- Inspired by the tactile joy of mechanical keyboards
-- Built with [Ralph](https://github.com/jellydn/ralph) autonomous development
-- Thanks to all beta testers and contributors
 
 ---
 
