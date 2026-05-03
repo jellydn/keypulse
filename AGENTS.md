@@ -31,6 +31,10 @@ Alternative: `xcodebuild -scheme KeyPulse` works from `KeyPulse/` too.
 - **SettingsStore quirk**: `object(forKey:)` check needed for Bool/Int to distinguish "unset" from `0`/`false`; injectable `UserDefaults` for test isolation
 - **Latency measurement**: `CACurrentMediaTime()` from QuartzCore; 100-sample history cap; `latencyReport()` for verification
 - **Controller must be retained** as property on AppDelegate or it deallocates
+- **SF Symbol icons**: Use `NSImage(systemSymbolName:accessibilityDescription:)` with `isTemplate = true` for menu bar icons; cache generated images per state
+- **Muted icon compositing**: Composite `keyboard` + `nosign` (bottom-right overlay) using `NSImage(size:flipped:drawingHandler:)` — no SF Symbol `keyboard.slash` exists natively
+- **Alternate menu pattern**: Right-click/option-click uses `statusItem?.button?.sendAction(on:)` with `[.leftMouseDown, .rightMouseDown]` and checks `NSApp.currentEvent?.modifierFlags.contains(.option)` in the handler to swap between main and compact alternate menus
+- **Testable icon logic**: Use a static pure function (`iconSymbolName(enabled:muted:) -> String`) so unit tests can verify correct symbol without requiring NSApp context
 
 ## Debug Window
 

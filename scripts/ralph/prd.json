@@ -275,8 +275,8 @@
         "Tests pass"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": "Keep image generation pure so it can be unit-tested without a running NSApp. SF Symbols requires macOS 11+, already satisfied by deployment target macOS 13."
+      "passes": true,
+      "notes": "SF Symbol-based icons: keyboard.fill (enabled+unmuted), keyboard (disabled), keyboard + nosign composite (muted). Accessibility label on status item button. Non-clickable header with attributed string (KeyPulse - <Profile>, <volume>% — <muted/active>). Right-click/option-click opens compact alternate menu with just Quit. All state changes update icon + header via syncMenuState(). Static iconSymbolName(enabled:muted:) for testable pure function. 135 tests pass."
     }
   ]
 }
