@@ -5,8 +5,12 @@ import os.log
 /// Persistent storage for user settings using UserDefaults.
 /// Handles saving and loading of profile, volume, mute state, and enabled state.
 final class SettingsStore {
-    /// Shared singleton instance for app-wide settings access.
+    /// Shared singleton instance for app-wide settings access (uses UserDefaults.standard).
     static let shared = SettingsStore()
+
+    /// The UserDefaults instance backing this store.
+    /// Injectable for test isolation; defaults to .standard for production use.
+    private let defaults: UserDefaults
 
     /// Cache for SMAppService status to avoid expensive IPC on every read.
     /// Updated when setter is called or when explicitly refreshed.
@@ -41,14 +45,14 @@ final class SettingsStore {
     /// The current sound profile.
     var profile: SoundProfile {
         get {
-            if let rawValue = UserDefaults.standard.string(forKey: Keys.profile),
+            if let rawValue = defaults.string(forKey: Keys.profile),
                let profile = SoundProfile(rawValue: rawValue) {
                 return profile
             }
             return Defaults.profile
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: Keys.profile)
+            defaults.set(newValue.rawValue, forKey: Keys.profile)
         }
     }
 
@@ -56,14 +60,14 @@ final class SettingsStore {
     var volume: Int {
         get {
             // Check if key exists to distinguish between 0 and not set
-            if UserDefaults.standard.object(forKey: Keys.volume) == nil {
+            if defaults.object(forKey: Keys.volume) == nil {
                 return Defaults.volume
             }
-            let storedValue = UserDefaults.standard.integer(forKey: Keys.volume)
+            let storedValue = defaults.integer(forKey: Keys.volume)
             return clamp(storedValue, min: 0, max: 100)
         }
         set {
-            UserDefaults.standard.set(clamp(newValue, min: 0, max: 100), forKey: Keys.volume)
+            defaults.set(clamp(newValue, min: 0, max: 100), forKey: Keys.volume)
         }
     }
 
@@ -71,39 +75,39 @@ final class SettingsStore {
     var isMuted: Bool {
         get {
             // Check if key exists to distinguish between false and not set
-            if UserDefaults.standard.object(forKey: Keys.isMuted) == nil {
+            if defaults.object(forKey: Keys.isMuted) == nil {
                 return Defaults.isMuted
             }
-            return UserDefaults.standard.bool(forKey: Keys.isMuted)
+            return defaults.bool(forKey: Keys.isMuted)
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.isMuted)
+            defaults.set(newValue, forKey: Keys.isMuted)
         }
     }
 
     /// Whether KeyPulse is enabled (processing keystrokes).
     var isEnabled: Bool {
         get {
-            if UserDefaults.standard.object(forKey: Keys.isEnabled) == nil {
+            if defaults.object(forKey: Keys.isEnabled) == nil {
                 return Defaults.isEnabled
             }
-            return UserDefaults.standard.bool(forKey: Keys.isEnabled)
+            return defaults.bool(forKey: Keys.isEnabled)
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.isEnabled)
+            defaults.set(newValue, forKey: Keys.isEnabled)
         }
     }
 
     /// Whether pitch randomization is enabled (subtle variation per keystroke).
     var pitchRandomization: Bool {
         get {
-            if UserDefaults.standard.object(forKey: Keys.pitchRandomization) == nil {
+            if defaults.object(forKey: Keys.pitchRandomization) == nil {
                 return Defaults.pitchRandomization
             }
-            return UserDefaults.standard.bool(forKey: Keys.pitchRandomization)
+            return defaults.bool(forKey: Keys.pitchRandomization)
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.pitchRandomization)
+            defaults.set(newValue, forKey: Keys.pitchRandomization)
         }
     }
 
@@ -128,10 +132,10 @@ final class SettingsStore {
             lastStatusCacheTime = Date()
 
             // Check if key exists in UserDefaults (first-time sync)
-            if UserDefaults.standard.object(forKey: Keys.launchAtLogin) == nil {
+            if defaults.object(forKey: Keys.launchAtLogin) == nil {
                 // If system says it's registered, update our stored value
                 if isRegistered {
-                    UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
+                    defaults.set(true, forKey: Keys.launchAtLogin)
                 }
             }
 
@@ -150,7 +154,7 @@ final class SettingsStore {
                 if service.status != .enabled {
                     do {
                         try service.register()
-                        UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
+                        defaults.set(true, forKey: Keys.launchAtLogin)
                     } catch {
                         Logger.settingsStore.error("Failed to register for launch at login: \(error.localizedDescription)")
                         // Invalidate cache on failure so next read queries fresh state
@@ -162,7 +166,7 @@ final class SettingsStore {
                 if service.status == .enabled {
                     do {
                         try service.unregister()
-                        UserDefaults.standard.set(false, forKey: Keys.launchAtLogin)
+                        defaults.set(false, forKey: Keys.launchAtLogin)
                     } catch {
                         Logger.settingsStore.error("Failed to unregister from launch at login: \(error.localizedDescription)")
                         // Invalidate cache on failure so next read queries fresh state
@@ -216,9 +220,16 @@ final class SettingsStore {
         pitchRandomization = Defaults.pitchRandomization
     }
 
-    // MARK: - Private Methods
+    // MARK: - Initialization
 
-    private init() {}
+    /// Creates a SettingsStore backed by the given UserDefaults.
+    /// - Parameter defaults: UserDefaults instance (defaults to .standard for production).
+    ///   Use a unique suite name for isolated test execution.
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    // MARK: - Private Methods
 
     /// Clamps a value to a specified range.
     /// - Parameters:

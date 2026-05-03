@@ -34,15 +34,13 @@
 
 ## Deferred Quality/Stability Improvements
 
-### High Priority
-1. **CGEventTap restart on failure** - Add `eventTapFailed` callback and `NSWorkspaceDidWakeNotification` observer
-2. **Force unwrap fixes** - `KeyboardMonitor.swift:66` (URL), `MenuBarManager.swift` (menu items)
-3. **print() → os.Logger** - Replace 20+ print statements with structured logging
-
-### Medium Priority
-4. **Error propagation to UI** - Show alerts for profile load failures
-5. **SoundAssets validation** - Explicit error messages for missing resources
-6. **MenuBarManager tests** - Zero test coverage currently
+### Completed ✅
+1. ✅ **CGEventTap restart on failure** — `NSWorkspaceDidWakeNotification` observer added
+2. ✅ **Force unwrap fixes** — All 5 eliminated (MenuBarManager menu items, KeyboardMonitor URL)
+3. ✅ **print() → os.Logger** — All 29 migrated to structured logging with 6 categories
+4. ✅ **Error propagation to UI** — All `try?` replaced with `do-catch` + `onError` propagation
+5. ✅ **SoundAssets validation** — Missing WAV files now logged with `.warning`
+6. ✅ **MenuBarManager tests** — 20 tests added (was zero coverage)
 
 ### Low Priority
 7. **Carbon framework deprecation** - Replace with hardcoded key codes
