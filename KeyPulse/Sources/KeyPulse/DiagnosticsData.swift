@@ -93,15 +93,33 @@ struct DiagnosticsData {
     }
 }
 
-/// Extension to make DiagnosticsData equatable for Combine publishers
+/// Extension to make DiagnosticsData equatable for Combine publishers.
+/// All fields are compared so that @Published correctly detects every change.
+/// A partial comparison would silently suppress UI updates for omitted fields.
 extension DiagnosticsData: Equatable {
     static func == (lhs: DiagnosticsData, rhs: DiagnosticsData) -> Bool {
         lhs.totalKeystrokes == rhs.totalKeystrokes &&
         lhs.lastKeyCode == rhs.lastKeyCode &&
         lhs.isLastKeyModifier == rhs.isLastKeyModifier &&
+        lhs.lastKeyDisplayName == rhs.lastKeyDisplayName &&
         lhs.activeProfile == rhs.activeProfile &&
         lhs.lastSampleIndex == rhs.lastSampleIndex &&
-        lhs.latencySampleCount == rhs.latencySampleCount
-        // Note: We don't compare all fields to reduce unnecessary UI updates
+        lhs.lastSampleFilename == rhs.lastSampleFilename &&
+        lhs.latencyAverageMs == rhs.latencyAverageMs &&
+        lhs.latencyMinMs == rhs.latencyMinMs &&
+        lhs.latencyMaxMs == rhs.latencyMaxMs &&
+        lhs.latencySampleCount == rhs.latencySampleCount &&
+        lhs.isShiftPressed == rhs.isShiftPressed &&
+        lhs.isCommandPressed == rhs.isCommandPressed &&
+        lhs.isOptionPressed == rhs.isOptionPressed &&
+        lhs.isControlPressed == rhs.isControlPressed &&
+        lhs.volumePercent == rhs.volumePercent &&
+        lhs.isMuted == rhs.isMuted &&
+        lhs.isPitchVariationEnabled == rhs.isPitchVariationEnabled &&
+        lhs.bundleIdentifier == rhs.bundleIdentifier &&
+        lhs.appVersion == rhs.appVersion &&
+        lhs.buildNumber == rhs.buildNumber &&
+        lhs.macOSVersion == rhs.macOSVersion &&
+        lhs.isEnabled == rhs.isEnabled
     }
 }

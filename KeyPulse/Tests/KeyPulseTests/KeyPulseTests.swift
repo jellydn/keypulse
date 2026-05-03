@@ -1004,19 +1004,177 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertEqual(controller.diagnostics().activeProfile, .clicky)
     }
 
-    func testDiagnosticsDataEquatable() {
+    // MARK: - DiagnosticsData Equatable Tests
+    // All 22 fields must be compared — a partial comparison would cause @Published
+    // to silently suppress UI updates for omitted fields.
+
+    func testDiagnosticsDataEquatable_identity() {
+        let data1 = DiagnosticsData()
+        let data2 = DiagnosticsData()
+        XCTAssertEqual(data1, data2)
+    }
+
+    func testDiagnosticsDataEquatable_keystrokeFields() {
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // totalKeystrokes
+        changed.totalKeystrokes = 42
+        XCTAssertNotEqual(base, changed, "totalKeystrokes difference must cause inequality")
+
+        // lastKeyCode
+        changed = DiagnosticsData()
+        changed.lastKeyCode = 49  // Space
+        XCTAssertNotEqual(base, changed, "lastKeyCode difference must cause inequality")
+
+        // isLastKeyModifier
+        changed = DiagnosticsData()
+        changed.isLastKeyModifier = true
+        XCTAssertNotEqual(base, changed, "isLastKeyModifier difference must cause inequality")
+
+        // lastKeyDisplayName
+        changed = DiagnosticsData()
+        changed.lastKeyDisplayName = "Space"
+        XCTAssertNotEqual(base, changed, "lastKeyDisplayName difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_profileFields() {
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // activeProfile
+        changed.activeProfile = .tactile
+        XCTAssertNotEqual(base, changed, "activeProfile difference must cause inequality")
+
+        // lastSampleIndex
+        changed = DiagnosticsData()
+        changed.lastSampleIndex = 3
+        XCTAssertNotEqual(base, changed, "lastSampleIndex difference must cause inequality")
+
+        // lastSampleFilename
+        changed = DiagnosticsData()
+        changed.lastSampleFilename = "clicky_key_02.wav"
+        XCTAssertNotEqual(base, changed, "lastSampleFilename difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_latencyFields() {
+        // THIS IS THE BUG FIX: latency fields were previously NOT compared,
+        // causing @Published to suppress latency updates in the Debug Window.
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // latencyAverageMs
+        changed.latencyAverageMs = 5.2
+        XCTAssertNotEqual(base, changed, "latencyAverageMs difference must cause inequality")
+
+        // latencyMinMs
+        changed = DiagnosticsData()
+        changed.latencyMinMs = 0.3
+        XCTAssertNotEqual(base, changed, "latencyMinMs difference must cause inequality")
+
+        // latencyMaxMs
+        changed = DiagnosticsData()
+        changed.latencyMaxMs = 15.7
+        XCTAssertNotEqual(base, changed, "latencyMaxMs difference must cause inequality")
+
+        // latencySampleCount
+        changed = DiagnosticsData()
+        changed.latencySampleCount = 100
+        XCTAssertNotEqual(base, changed, "latencySampleCount difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_modifierFlags() {
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // isShiftPressed
+        changed.isShiftPressed = true
+        XCTAssertNotEqual(base, changed, "isShiftPressed difference must cause inequality")
+
+        // isCommandPressed
+        changed = DiagnosticsData()
+        changed.isCommandPressed = true
+        XCTAssertNotEqual(base, changed, "isCommandPressed difference must cause inequality")
+
+        // isOptionPressed
+        changed = DiagnosticsData()
+        changed.isOptionPressed = true
+        XCTAssertNotEqual(base, changed, "isOptionPressed difference must cause inequality")
+
+        // isControlPressed
+        changed = DiagnosticsData()
+        changed.isControlPressed = true
+        XCTAssertNotEqual(base, changed, "isControlPressed difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_settingsFields() {
+        // volumePercent, isMuted, isPitchVariationEnabled were previously NOT compared,
+        // so changing mute/volume via the menu bar would not update the Debug Window.
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // volumePercent
+        changed.volumePercent = 50
+        XCTAssertNotEqual(base, changed, "volumePercent difference must cause inequality")
+
+        // isMuted
+        changed = DiagnosticsData()
+        changed.isMuted = true
+        XCTAssertNotEqual(base, changed, "isMuted difference must cause inequality")
+
+        // isPitchVariationEnabled
+        changed = DiagnosticsData()
+        changed.isPitchVariationEnabled = false
+        XCTAssertNotEqual(base, changed, "isPitchVariationEnabled difference must cause inequality")
+
+        // isEnabled
+        changed = DiagnosticsData()
+        changed.isEnabled = false
+        XCTAssertNotEqual(base, changed, "isEnabled difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_appInfoFields() {
+        var base = DiagnosticsData()
+        var changed = DiagnosticsData()
+
+        // bundleIdentifier
+        changed.bundleIdentifier = "com.other.app"
+        XCTAssertNotEqual(base, changed, "bundleIdentifier difference must cause inequality")
+
+        // appVersion
+        changed = DiagnosticsData()
+        changed.appVersion = "2.0.0"
+        XCTAssertNotEqual(base, changed, "appVersion difference must cause inequality")
+
+        // buildNumber
+        changed = DiagnosticsData()
+        changed.buildNumber = "99"
+        XCTAssertNotEqual(base, changed, "buildNumber difference must cause inequality")
+
+        // macOSVersion should differ from empty string
+        changed = DiagnosticsData()
+        changed.macOSVersion = ""
+        XCTAssertNotEqual(base, changed, "macOSVersion difference must cause inequality")
+    }
+
+    func testDiagnosticsDataEquatable_allFieldsChanged() {
         var data1 = DiagnosticsData()
         var data2 = DiagnosticsData()
-
-        // Same initial values should be equal
-        XCTAssertEqual(data1, data2)
-
-        // Change one field
-        data1.totalKeystrokes = 10
+        data2.totalKeystrokes = 99
+        data2.latencyAverageMs = 3.7
+        data2.isMuted = true
+        data2.volumePercent = 25
+        data2.isShiftPressed = true
+        data2.activeProfile = .clicky
         XCTAssertNotEqual(data1, data2)
 
-        // Match it back
-        data2.totalKeystrokes = 10
+        // Match all fields back — should be equal again
+        data1.totalKeystrokes = 99
+        data1.latencyAverageMs = 3.7
+        data1.isMuted = true
+        data1.volumePercent = 25
+        data1.isShiftPressed = true
+        data1.activeProfile = .clicky
         XCTAssertEqual(data1, data2)
     }
 
