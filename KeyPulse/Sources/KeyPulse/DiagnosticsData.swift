@@ -3,10 +3,16 @@ import Foundation
 /// Data structure containing real-time diagnostics for the Debug Window.
 /// Published by KeyPulseController for Combine-based UI binding.
 struct DiagnosticsData {
+    /// Reads a value from the main bundle's Info.plist.
+    private static func bundleString(_ key: String, fallback: String) -> String {
+        Bundle.main.infoDictionary?[key] as? String ?? fallback
+    }
+
+
     /// Total number of keystrokes detected
     var totalKeystrokes: Int = 0
 
-    /// Last key code received (0xFF for modifier events)
+    /// Last key code received (0 for modifier events — check isLastKeyModifier instead)
     var lastKeyCode: UInt16 = 0
 
     /// Whether the last keystroke was a modifier key (flagsChanged)
@@ -41,10 +47,10 @@ struct DiagnosticsData {
     var isMuted: Bool = false
     var isPitchVariationEnabled: Bool = true
 
-    /// App and system info
-    var bundleIdentifier: String = "com.keypulse.app"
-    var appVersion: String = "0.1.0"
-    var buildNumber: String = "1"
+    /// App and system info (read dynamically from Bundle.main)
+    var bundleIdentifier: String = DiagnosticsData.bundleString(kCFBundleIdentifierKey as String, fallback: "com.keypulse.app")
+    var appVersion: String = DiagnosticsData.bundleString("CFBundleShortVersionString", fallback: "0.1.0")
+    var buildNumber: String = DiagnosticsData.bundleString(kCFBundleVersionKey as String, fallback: "1")
     var macOSVersion: String = ProcessInfo.processInfo.operatingSystemVersionString
 
     /// Whether the controller is currently enabled

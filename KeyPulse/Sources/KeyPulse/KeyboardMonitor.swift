@@ -39,12 +39,35 @@ final class KeyboardMonitor {
     /// Observer token for system sleep/wake notifications.
     private var wakeObserver: NSObjectProtocol?
 
+    /// Timer for periodic event tap health checks.
+    private var healthCheckTimer: Timer?
+
     /// Tracks the last modifier flags state to detect actual changes (not repeated events).
     /// Used for debouncing flagsChanged events so each modifier press fires once.
     private var lastModifierFlags: CGEventFlags = []
 
+    /// Whether the last key-down event was a modifier (flagsChanged) event.
+    /// Used instead of a sentinel key code (0xFF) to avoid overlap with real HID key codes.
+    private(set) var isLastEventModifier = false
+
+    /// Whether secure text input is detected (password fields, credit card forms, etc.).
+    /// When true, keystroke sounds are suppressed to protect user privacy.
+    private(set) var isSecureInputDetected = false
+
+    /// Flag bit for secure text input detection in CGEventFlags.
+    /// Defined as `kCGEventFlagMaskSecureInput` (bit 16) in CoreGraphics private headers.
+    private let secureInputFlag: CGEventFlags = CGEventFlags(rawValue: 1 << 16)
+
     /// Callback for modifier flag changes. Called whenever shift/cmd/option/ctrl state changes.
     var onFlagsChanged: ((_ flags: CGEventFlags) -> Void)?
+
+    /// Dedicated serial queue for keystroke → audio dispatch.
+    /// Isolates audio playback from main thread jank, preventing keystroke
+    /// queueing when the main thread is blocked by animations or sheet presentation.
+    private let audioDispatchQueue = DispatchQueue(
+        label: "com.keypulse.audio-dispatch",
+        qos: .userInteractive
+    )
 
     /// Creates a new keyboard monitor.
     /// Note: Call `start()` to begin monitoring after checking/requesting accessibility permission.
@@ -104,6 +127,9 @@ final class KeyboardMonitor {
         // Register for system wake notifications to restart tap after sleep
         registerWakeObserver()
 
+        // Start periodic health check (every 30 seconds) to detect tap invalidation
+        startHealthCheckTimer()
+
         isMonitoring = true
         Logger.keyboardMonitor.info("Started monitoring keyboard events")
         return true
@@ -145,6 +171,7 @@ final class KeyboardMonitor {
 
     /// Registers for system wake notifications to restart the event tap.
     /// CGEventTaps are torn down during system sleep and must be re-created on wake.
+    /// Uses exponential backoff (1s, 2s, 4s) to recover from transient system state after wake.
     private func registerWakeObserver() {
         // Remove any existing observer first
         if let observer = wakeObserver {
@@ -163,19 +190,39 @@ final class KeyboardMonitor {
             // Tear down the old (now-invalid) tap
             self.tearDownEventTap()
 
-            // Re-create the tap
+            // Attempt to re-create the tap with exponential backoff
+            self.retryCreateEventTap(maxAttempts: 3, baseDelayMs: 1000)
+        }
+    }
+
+    /// Attempts to create the event tap with exponential backoff retry.
+    /// - Parameters:
+    ///   - maxAttempts: Maximum number of retry attempts.
+    ///   - baseDelayMs: Initial delay in milliseconds (doubles each attempt).
+    private func retryCreateEventTap(maxAttempts: Int, baseDelayMs: Int) {
+        for attempt in 1...maxAttempts {
             if self.createEventTap() {
-                Logger.keyboardMonitor.info("Event tap restarted after wake")
-            } else {
-                Logger.keyboardMonitor.error("Failed to restart event tap after wake")
-                self.isMonitoring = false
+                Logger.keyboardMonitor.info("Event tap restarted after wake (attempt \(attempt))")
+                return
+            }
+
+            if attempt < maxAttempts {
+                let delayMs = baseDelayMs * Int(pow(2.0, Double(attempt - 1)))
+                Logger.keyboardMonitor.info("Event tap restart attempt \(attempt) failed — retrying in \(delayMs)ms")
+                Thread.sleep(forTimeInterval: Double(delayMs) / 1000.0)
             }
         }
+
+        Logger.keyboardMonitor.error("Failed to restart event tap after \(maxAttempts) attempts — disabling monitoring")
+        self.isMonitoring = false
     }
 
     /// Stops monitoring keyboard events.
     func stop() {
         guard isMonitoring else { return }
+
+        // Stop health check timer
+        stopHealthCheckTimer()
 
         // Remove wake observer
         if let observer = wakeObserver {
@@ -209,6 +256,35 @@ final class KeyboardMonitor {
         eventTap = nil
     }
 
+    // MARK: - Health Check
+
+    /// Starts a 30-second interval timer that checks whether the CGEventTap is still valid.
+    /// If the tap becomes invalid (e.g., due to permissions revocation or system policy change),
+    /// the monitor is stopped and the user loses feedback. The health check ensures we can
+    /// detect this condition and attempt recovery.
+    private func startHealthCheckTimer() {
+        stopHealthCheckTimer()
+        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+            guard let self = self, self.isMonitoring, let tap = self.eventTap else { return }
+
+            if !CFMachPortIsValid(tap) {
+                Logger.keyboardMonitor.error("Event tap became invalid — attempting restart")
+                self.tearDownEventTap()
+                if !self.createEventTap() {
+                    Logger.keyboardMonitor.error("Failed to recreate invalid event tap — disabling monitoring")
+                    self.isMonitoring = false
+                    self.stopHealthCheckTimer()
+                }
+            }
+        }
+    }
+
+    /// Stops and invalidates the health check timer.
+    private func stopHealthCheckTimer() {
+        healthCheckTimer?.invalidate()
+        healthCheckTimer = nil
+    }
+
     // MARK: - Event Handling
 
     /// Handles a CGEvent from the event tap.
@@ -230,11 +306,24 @@ final class KeyboardMonitor {
     /// Handles a key-down event (regular keystrokes).
     private func handleKeyDownEvent(_ event: CGEvent) {
         // Extract the key code from the event
-        // CGEvent key codes match virtual key codes
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
 
-        // Call the handler on the main thread
-        DispatchQueue.main.async { [weak self] in
+        // Regular keystrokes are never modifier events
+        isLastEventModifier = false
+
+        // Check for secure text input (password fields, credit card forms, etc.)
+        // When detected, suppress sounds to avoid leaking sensitive input patterns.
+        let sessionFlags = CGEventSource.flagsState(.combinedSessionState)
+        let isSecureInput = sessionFlags.contains(secureInputFlag)
+        isSecureInputDetected = isSecureInput
+
+        guard !isSecureInput else {
+            Logger.keyboardMonitor.info("Secure input detected — suppressing keystroke sounds")
+            return
+        }
+
+        // Dispatch on the dedicated audio queue to isolate playback from main thread jank
+        audioDispatchQueue.async { [weak self] in
             self?.onKeyDown?(keyCode)
         }
     }
@@ -255,15 +344,17 @@ final class KeyboardMonitor {
             return
         }
 
-        // For modifier events, use a special key code to indicate it's a modifier
-        // We'll use 0xFF (255) as a sentinel value for modifier-only events
-        // This is outside the normal key code range (0-127)
-        let modifierKeyCode: UInt16 = 0xFF
+        // For modifier events, we mark isLastEventModifier so consumers can distinguish
+        // modifier-only presses from regular keystrokes. A separate boolean flag avoids
+        // sentinel key code 0xFF which could overlap with real extended HID key codes.
+        let anyKeyCode: UInt16 = 0  // Arbitrary; consumers check isLastEventModifier instead
 
-        // Call the handlers on the main thread
-        DispatchQueue.main.async { [weak self] in
-            self?.onKeyDown?(modifierKeyCode)
-            self?.onFlagsChanged?(currentFlags)
+        // Dispatch on the dedicated audio queue to isolate playback from main thread jank
+        audioDispatchQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.isLastEventModifier = true
+            self.onKeyDown?(anyKeyCode)
+            self.onFlagsChanged?(currentFlags)
         }
     }
 

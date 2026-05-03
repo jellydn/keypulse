@@ -288,7 +288,7 @@ struct PreferencesView: View {
 
                 Button("Show Debug Window") {
                     NotificationCenter.default.post(
-                        name: NSNotification.Name("keypulse_showDebugWindow"),
+                        name: .showDebugWindow,
                         object: nil
                     )
                 }

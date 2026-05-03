@@ -479,11 +479,12 @@ final class MenuBarManager {
     }
 
     @objc private func toggleLaunchAtLogin() {
-        // Get current state from UserDefaults/settings store via callback
-        // The actual state handling is done by the app delegate
+        // Delegate to the app delegate which handles SMAppService registration.
+        // The callback is responsible for updating the menu state via
+        // updateLaunchAtLoginState() after the registration attempt completes
+        // (success or failure), avoiding an optimistic flicker.
         let currentState = launchAtLoginMenuItem?.state == .on
         let newState = !currentState
-        launchAtLoginMenuItem?.state = newState ? .on : .off
         onLaunchAtLoginChanged?(newState)
     }
 
