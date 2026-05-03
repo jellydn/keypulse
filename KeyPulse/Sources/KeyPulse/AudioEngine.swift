@@ -152,7 +152,11 @@ final class AudioEngine {
                     Logger.audioEngine.info("Profile '\(profile.rawValue)' reloaded with new format")
 
                     // Re-pre-warm all profiles so instant switching is restored
-                    try? self.preWarmAllProfiles()
+                    do {
+                        try self.preWarmAllProfiles()
+                    } catch {
+                        Logger.audioEngine.error("Failed to re-pre-warm after config change: \(error.localizedDescription)")
+                    }
                 }
             } catch {
                 Logger.audioEngine.error("Failed to restart engine after configuration change: \(error.localizedDescription)")

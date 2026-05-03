@@ -4,7 +4,8 @@ import os.log
 
 /// Persistent storage for user settings using UserDefaults.
 /// Handles saving and loading of profile, volume, mute state, and enabled state.
-final class SettingsStore {
+/// Conforms to ObservableObject so SwiftUI views can bind to it via @ObservedObject.
+final class SettingsStore: ObservableObject {
     /// Shared singleton instance for app-wide settings access (uses UserDefaults.standard).
     static let shared = SettingsStore()
 
@@ -57,6 +58,7 @@ final class SettingsStore {
             return Defaults.profile
         }
         set {
+            objectWillChange.send()
             defaults.set(newValue.rawValue, forKey: Keys.profile)
         }
     }
@@ -72,6 +74,7 @@ final class SettingsStore {
             return clamp(storedValue, min: 0, max: 100)
         }
         set {
+            objectWillChange.send()
             defaults.set(clamp(newValue, min: 0, max: 100), forKey: Keys.volume)
         }
     }
@@ -86,6 +89,7 @@ final class SettingsStore {
             return defaults.bool(forKey: Keys.isMuted)
         }
         set {
+            objectWillChange.send()
             defaults.set(newValue, forKey: Keys.isMuted)
         }
     }
@@ -99,6 +103,7 @@ final class SettingsStore {
             return defaults.bool(forKey: Keys.isEnabled)
         }
         set {
+            objectWillChange.send()
             defaults.set(newValue, forKey: Keys.isEnabled)
         }
     }
@@ -112,6 +117,7 @@ final class SettingsStore {
             return defaults.bool(forKey: Keys.pitchRandomization)
         }
         set {
+            objectWillChange.send()
             defaults.set(newValue, forKey: Keys.pitchRandomization)
         }
     }
@@ -147,6 +153,8 @@ final class SettingsStore {
             return isRegistered
         }
         set {
+            objectWillChange.send()
+
             // Sync with SMAppService
             let service = SMAppService.mainApp
 

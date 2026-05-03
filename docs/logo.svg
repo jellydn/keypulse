@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="keyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e94560"/>
+      <stop offset="100%" stop-color="#c23152"/>
+    </linearGradient>
+    <linearGradient id="keyFaceGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5f5f5"/>
+      <stop offset="100%" stop-color="#d4d4d4"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e94560" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#e94560" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#e94560" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="230" fill="url(#bgGrad)" filter="url(#shadow)"/>
+
+  <!-- Sound pulse waves -->
+  <g opacity="0.15">
+    <path d="M110,220 Q180,180 256,200 Q332,220 402,180" stroke="url(#pulseGrad)" stroke-width="3" fill="none" stroke-linecap="round">
+      <animate attributeName="d" dur="1.5s" repeatCount="indefinite"
+        values="M110,220 Q180,180 256,200 Q332,220 402,180;
+                M110,210 Q180,170 256,190 Q332,210 402,170;
+                M110,220 Q180,180 256,200 Q332,220 402,180"/>
+    </path>
+    <path d="M100,260 Q180,220 256,240 Q332,260 412,220" stroke="url(#pulseGrad)" stroke-width="3.5" fill="none" stroke-linecap="round">
+      <animate attributeName="d" dur="1.5s" repeatCount="indefinite"
+        values="M100,260 Q180,220 256,240 Q332,260 412,220;
+                M100,250 Q180,210 256,230 Q332,250 412,210;
+                M100,260 Q180,220 256,240 Q332,260 412,220"/>
+    </path>
+    <path d="M115,300 Q185,260 256,280 Q327,300 397,260" stroke="url(#pulseGrad)" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <animate attributeName="d" dur="1.5s" repeatCount="indefinite"
+        values="M115,300 Q185,260 256,280 Q327,300 397,260;
+                M115,290 Q185,250 256,270 Q327,290 397,250;
+                M115,300 Q185,260 256,280 Q327,300 397,260"/>
+    </path>
+  </g>
+
+  <!-- Keyboard key base (red accent) -->
+  <rect x="148" y="188" width="216" height="176" rx="24" ry="24" fill="url(#keyGrad)" filter="url(#shadow)"/>
+
+  <!-- Keyboard key face -->
+  <rect x="164" y="200" width="184" height="152" rx="16" ry="16" fill="url(#keyFaceGrad)"/>
+
+  <!-- Key switches / mechanical feel lines -->
+  <g opacity="0.08">
+    <line x1="184" y1="225" x2="328" y2="225" stroke="#333" stroke-width="1"/>
+    <line x1="184" y1="250" x2="328" y2="250" stroke="#333" stroke-width="1"/>
+    <line x1="184" y1="275" x2="328" y2="275" stroke="#333" stroke-width="1"/>
+    <line x1="184" y1="300" x2="328" y2="300" stroke="#333" stroke-width="1"/>
+    <line x1="184" y1="325" x2="328" y2="325" stroke="#333" stroke-width="1"/>
+  </g>
+
+  <!-- K letterform -->
+  <g filter="url(#glow)">
+    <text x="256" y="300" font-family="'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="128" font-weight="700" fill="#e94560" text-anchor="middle" dominant-baseline="central">
+      K
+    </text>
+  </g>
+
+  <!-- Small sound wave indicator over the key -->
+  <g opacity="0.7">
+    <path d="M300,240 L308,240 L308,260 L316,260" stroke="#e94560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M320,235 L328,235 L328,265 L336,265" stroke="#e94560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M340,230 L348,230 L348,270 L356,270" stroke="#e94560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- Sound pulse from the side -->
+  <g opacity="0.5">
+    <path d="M135,260 C125,250 125,270 135,260" stroke="#e94560" stroke-width="2" fill="none" stroke-linecap="round">
+      <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0.5;0.1;0.5"/>
+    </path>
+    <path d="M125,275 C110,255 110,285 125,275" stroke="#e94560" stroke-width="2" fill="none" stroke-linecap="round">
+      <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0.3;0.05;0.3"/>
+    </path>
+    <path d="M377,260 C387,250 387,270 377,260" stroke="#e94560" stroke-width="2" fill="none" stroke-linecap="round">
+      <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0.5;0.1;0.5"/>
+    </path>
+    <path d="M387,275 C402,255 402,285 387,275" stroke="#e94560" stroke-width="2" fill="none" stroke-linecap="round">
+      <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0.3;0.05;0.3"/>
+    </path>
+  </g>
+
+  <!-- Caption text -->
+  <text x="256" y="440" font-family="'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#888" text-anchor="middle" letter-spacing="4">
+    KEYPULSE
+  </text>
+</svg>

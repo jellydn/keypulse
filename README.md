@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo.svg">
+    <img src="docs/logo.svg" width="160" alt="KeyPulse Logo" style="max-width: 100%;">
+  </picture>
+</p>
+
 # 🎹 KeyPulse
 
 > Make any keyboard feel satisfying.
