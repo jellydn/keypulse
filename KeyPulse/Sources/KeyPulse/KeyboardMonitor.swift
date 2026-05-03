@@ -70,7 +70,10 @@ final class KeyboardMonitor {
 
     /// Opens System Settings to the Accessibility section for the user to manually enable permission.
     static func openAccessibilitySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+            print("KeyboardMonitor: Failed to construct accessibility settings URL")
+            return
+        }
         NSWorkspace.shared.open(url)
     }
 

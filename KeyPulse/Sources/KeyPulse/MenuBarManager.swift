@@ -90,13 +90,14 @@ final class MenuBarManager {
         let menu = NSMenu()
 
         // Enabled toggle
-        enabledMenuItem = NSMenuItem(
+        let enabledItem = NSMenuItem(
             title: "Enabled",
             action: #selector(toggleEnabled),
             keyEquivalent: ""
         )
-        enabledMenuItem?.target = self
-        menu.addItem(enabledMenuItem!)
+        enabledItem.target = self
+        enabledMenuItem = enabledItem
+        menu.addItem(enabledItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -143,33 +144,36 @@ final class MenuBarManager {
         menu.addItem(volumeItem)
 
         // Mute toggle
-        muteMenuItem = NSMenuItem(
+        let muteItem = NSMenuItem(
             title: "Mute",
             action: #selector(toggleMute),
             keyEquivalent: ""
         )
-        muteMenuItem?.target = self
-        menu.addItem(muteMenuItem!)
+        muteItem.target = self
+        muteMenuItem = muteItem
+        menu.addItem(muteItem)
 
         // Pitch Variation toggle
-        pitchVariationMenuItem = NSMenuItem(
+        let pitchItem = NSMenuItem(
             title: "Pitch Variation",
             action: #selector(togglePitchVariation),
             keyEquivalent: ""
         )
-        pitchVariationMenuItem?.target = self
-        menu.addItem(pitchVariationMenuItem!)
+        pitchItem.target = self
+        pitchVariationMenuItem = pitchItem
+        menu.addItem(pitchItem)
 
         menu.addItem(NSMenuItem.separator())
 
         // Launch at Login toggle
-        launchAtLoginMenuItem = NSMenuItem(
+        let loginItem = NSMenuItem(
             title: "Launch at Login",
             action: #selector(toggleLaunchAtLogin),
             keyEquivalent: ""
         )
-        launchAtLoginMenuItem?.target = self
-        menu.addItem(launchAtLoginMenuItem!)
+        loginItem.target = self
+        launchAtLoginMenuItem = loginItem
+        menu.addItem(loginItem)
 
         menu.addItem(NSMenuItem.separator())
 
