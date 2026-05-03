@@ -38,6 +38,14 @@ final class KeyPulseController: ObservableObject {
     /// Last sample index played.
     private var lastSampleIndex: Int = 0
 
+    /// Timestamp of the last diagnostics publish (for source-level throttling).
+    private var lastDiagnosticsPublishTime: TimeInterval = 0
+
+    /// Minimum interval between @Published diagnostics updates (20 Hz = 50ms).
+    /// This prevents wasted Combine pipeline work — the DebugWindowController
+    /// throttles consumption to 10 Hz anyway, so publishing faster is useless.
+    private let diagnosticsThrottleInterval: TimeInterval = 1.0 / 20.0
+
     /// Cancellable for throttling diagnostic updates.
     private var diagnosticsUpdateCancellable: AnyCancellable?
 
@@ -136,7 +144,7 @@ final class KeyPulseController: ObservableObject {
         keyboardMonitor.onKeyDown = { [weak self] keyCode in
             guard let self = self, self.isEnabled else { return }
 
-            // Track keystroke diagnostics
+            // Track keystroke diagnostics (always — these are cheap counters)
             self.totalKeystrokes += 1
             self.lastKeyCode = keyCode
             self.isLastKeyModifier = (keyCode == 0xFF)
@@ -144,8 +152,14 @@ final class KeyPulseController: ObservableObject {
             // Play a random sample from the current profile
             self.playRandomSample()
 
-            // Update diagnostics after handling keystroke
-            self.updateDiagnosticsData()
+            // Throttled diagnostics update — only publish at ~20 Hz max.
+            // This avoids wasted @Published / Combine pipeline work since the
+            // DebugWindowController already throttles consumption to 10 Hz.
+            let now = CFAbsoluteTimeGetCurrent()
+            if now - self.lastDiagnosticsPublishTime >= self.diagnosticsThrottleInterval {
+                self.lastDiagnosticsPublishTime = now
+                self.updateDiagnosticsData()
+            }
         }
 
         // Set up modifier flags tracking
@@ -164,7 +178,7 @@ final class KeyPulseController: ObservableObject {
     }
 
     /// Updates the published diagnostics data.
-    /// Called on every keystroke and when settings change.
+    /// Throttled on the keystroke hot path; called unconditionally on settings changes.
     private func updateDiagnosticsData() {
         diagnosticsData.totalKeystrokes = totalKeystrokes
         diagnosticsData.lastKeyCode = lastKeyCode
@@ -348,6 +362,7 @@ final class KeyPulseController: ObservableObject {
         isLastKeyModifier = false
         lastSampleIndex = 0
         audioEngine.resetLatencyMeasurements()
+        lastDiagnosticsPublishTime = 0  // Allow immediate publish on next keystroke
         updateDiagnosticsData()
     }
 
