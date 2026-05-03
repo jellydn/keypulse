@@ -45,12 +45,12 @@
 8. ✅ **AVAudioEngineConfigurationChange observer** — Audio route resilience
 9. ✅ **Performance test assertions** — All 13 files now have regression guards
 10. ✅ **DebugWindowController refactor** — @ObservedObject replaces manual view recreation
+11. ✅ **Carbon framework deprecation** — Removed unused `import Carbon` from 2 files
+12. ✅ **Settings schema versioning** — `migrateIfNeeded()` infrastructure for future format changes
 
-## All Reviewer Findings Resolved ✅
+## All Items Resolved ✅
 
-### Low Priority (deferred)
-- **Carbon framework deprecation** - Replace with hardcoded key codes
-- **Settings schema versioning** - Add migration path for future settings changes
+No remaining deferred improvements. All reviewer findings addressed. 130 tests passing.
 
 ## Key Learnings
 

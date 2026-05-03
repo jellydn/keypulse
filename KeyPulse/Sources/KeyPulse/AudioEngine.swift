@@ -154,6 +154,9 @@ final class AudioEngine {
                 if let profile = savedProfile {
                     try self.loadProfile(profile)
                     Logger.audioEngine.info("Profile '\(profile.rawValue)' reloaded with new format")
+
+                    // Re-pre-warm all profiles so instant switching is restored
+                    try? self.preWarmAllProfiles()
                 }
             } catch {
                 Logger.audioEngine.error("Failed to restart engine after configuration change: \(error.localizedDescription)")

@@ -230,6 +230,53 @@
       "priority": 13,
       "passes": true,
       "notes": "Debug Window implemented with SwiftUI inside NSHostingView. Features: ~360x420 floating window, live keystroke counter, key code display with modifier detection, active profile/sample info, latency metrics (avg/min/max/sample count), live modifier flags (shift/cmd/option/ctrl), settings display (volume/muted/pitch/enabled), profile segmented control, Test Sound button, Test All Profiles button, Reset Stats button, Copy Diagnostics button. Menu item with Cmd+Opt+D shortcut. KeyPulseController.diagnostics() returns DiagnosticsData struct. Combine @Published with throttle(100ms) for real-time updates without exceeding 10Hz. Window frame persisted via NSWindow frame autosave. 9 new unit tests added. README.md updated with Debug Window documentation. All 69 tests pass."
+    },
+    {
+      "id": "US-014",
+      "title": "Add Preferences (Settings) window with full GUI",
+      "description": "As a user, I want a proper Preferences window so I can configure KeyPulse with a comfortable UI instead of squeezing every control into the menu bar dropdown.",
+      "acceptanceCriteria": [
+        "Add `Preferences...` (Cmd+,) menu item to the status-bar menu and bind the standard macOS shortcut",
+        "Implement `PreferencesWindowController` opening a single `NSWindow` (~480x360, non-resizable, centered on first open, frame remembered across launches via autosave name `keypulse.preferences`)",
+        "Window uses SwiftUI inside `NSHostingController` and is organized as a `TabView` with three tabs:",
+        "  - `General`: `Enabled` toggle, `Launch at Login` toggle (mirrors SMAppService state)",
+        "  - `Sounds`: profile picker (segmented control: Linear / Tactile / Clicky), volume slider 0-100 with current value label, `Mute` toggle, `Pitch Variation` toggle, `Test Sound` button",
+        "  - `Advanced`: `Show Debug Window` button (opens US-013's window), `Reset All Settings` button with confirmation alert, version label `KeyPulse vX.Y.Z (build N)`",
+        "All controls bind to `SettingsStore` so changes persist immediately and stay in sync with the menu bar (changing profile in Preferences updates menu checkmark and vice versa)",
+        "Closing the window does NOT quit the app (LSUIElement remains true); reopening from the menu re-uses the same window instance",
+        "Window appears in front (`NSApp.activate(ignoringOtherApps: true)` + `window.makeKeyAndOrderFront(nil)`) when opened from a background menu-bar app",
+        "Add unit tests: opening the window does not crash, settings round-trip between Preferences UI and SettingsStore, `Reset All Settings` clears all keys",
+        "Document the Preferences window in `README.md` (one paragraph + screenshot placeholder)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Pair with US-015 (richer menu tray). Reuse SettingsStore as the single source of truth - do NOT duplicate state into view models. Make SettingsStore conform to ObservableObject and bind via @StateObject in SwiftUI."
+    },
+    {
+      "id": "US-015",
+      "title": "Polish menu tray (status icon, state indicators, richer menu)",
+      "description": "As a user, I want the menu tray icon and dropdown to reflect the app's current state at a glance so I can see if KeyPulse is enabled, muted, or which profile is active without opening Preferences.",
+      "acceptanceCriteria": [
+        "Replace the placeholder status-item title `KP` with an SF Symbol (`keyboard` or `keyboard.fill`) using `NSImage(systemSymbolName:)` and `isTemplate = true`",
+        "Status icon visually reflects state:",
+        "  - Enabled + unmuted: solid `keyboard.fill`",
+        "  - Disabled: outline `keyboard` (no fill)",
+        "  - Muted: `keyboard` with a slash overlay (composite or custom-drawn)",
+        "Status item has accessibility label that reads, e.g., `KeyPulse - Linear profile, 65% volume`",
+        "Menu dropdown gets a non-clickable header NSMenuItem at the top showing `KeyPulse - <Profile>` with an attributed-string secondary line for `<volume>%, <muted/active>`",
+        "Menu has a separator + `Preferences...` (Cmd+,) item that opens US-014's window",
+        "Menu has a separator + `Show Debug Window` (Cmd+Opt+D) item that opens US-013's window",
+        "Right-clicking (or option-clicking) the status item opens a compact alternate menu with just `Quit` (optional but encouraged)",
+        "All state changes (profile/volume/mute/enabled) update the icon AND the header line within 100ms",
+        "Add unit tests verifying `MenuBarManager.iconState(for:)` returns the correct symbol for each combination of (enabled, muted)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Keep image generation pure so it can be unit-tested without a running NSApp. SF Symbols requires macOS 11+, already satisfied by deployment target macOS 13."
     }
   ]
 }
