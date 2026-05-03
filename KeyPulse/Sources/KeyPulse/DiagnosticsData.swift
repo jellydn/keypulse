@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 /// Data structure containing real-time diagnostics for the Debug Window.
 /// Published by KeyPulseController for Combine-based UI binding.
@@ -93,7 +92,7 @@ struct DiagnosticsData {
     }
 }
 
-/// Extension to make DiagnosticsData equatable for Combine publishers.
+/// Extension to make DiagnosticsData equatable for @Published change detection.
 /// All fields are compared so that @Published correctly detects every change.
 /// A partial comparison would silently suppress UI updates for omitted fields.
 extension DiagnosticsData: Equatable {

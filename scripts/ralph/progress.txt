@@ -387,3 +387,28 @@
   - All 52 tests pass, build succeeds with no warnings
   - Menu item follows same pattern as other toggles: checkmark reflects state, callback persists to SettingsStore
 ---
+
+## 2026-05-03 20:30 - US-014
+- **Implemented:** Add Preferences (Settings) window with full GUI
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/SettingsStore.swift` - Added ObservableObject conformance, objectWillChange.send() to all setters
+  - `KeyPulse/Sources/KeyPulse/PreferencesWindowController.swift` - New: PreferencesWindowController + PreferencesView with TabView (General/Sounds/Advanced)
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - Added Preferences... menu item (Cmd+,) and onPreferencesRequested callback
+  - `KeyPulse/Sources/KeyPulse/KeyPulseAppDelegate.swift` - Added PreferencesWindowController init, notification observers for Show Debug Window
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 5 new unit tests for Preferences window
+  - `README.md` - Added Preferences documentation, keyboard shortcut table, project structure update
+  - `AGENTS.md` - Added Preferences Window and SettingsStore as ObservableObject documentation
+  - `scripts/ralph/prd.json` - Marked US-014 as passing
+- **Learnings for future iterations:**
+  - SettingsStore as ObservableObject: Use `objectWillChange.send()` in setters (not @Published on computed properties), as computed properties can't use @Published directly
+  - Use `@ObservedObject` (not `@StateObject`) for singleton stores in SwiftUI views, since the instance already exists
+  - Preferences window at `.titled + .closable` style mask (non-resizable), following standard macOS preferences window conventions
+  - Use NotificationCenter for cross-component actions (e.g., "Show Debug Window" from Advanced tab)
+  - Preferences changes propagate to menu bar via `onSettingsChanged` callback → `menuBarManager.refresh()` pattern
+  - Menu bar changes propagate to Preferences automatically because SettingsStore is ObservableObject with @ObservedObject binding
+  - Preferences window uses NSWindow.frame autosave name `keypulse.preferences` for position persistence
+  - `windowShouldClose` returns false and calls `orderOut` to hide instead of close (reuse window instance)
+  - `NSApp.activate(ignoringOtherApps: true)` required to bring window to front from background menu-bar app
+  - Setting UserDefaults from SwiftUI bindings works correctly because PreferencesView uses Binding(get/set) that writes to SettingsStore
+  - All 135 tests pass, build succeeds with no warnings
+---

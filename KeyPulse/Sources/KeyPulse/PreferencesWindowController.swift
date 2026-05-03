@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import ServiceManagement
 
 // MARK: - PreferencesWindowController
 
@@ -86,17 +85,8 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
     // MARK: - Public Methods
 
     /// Shows the preferences window, activating the app and bringing it to front.
+    /// The view updates automatically via @ObservedObject — no manual recreation needed.
     func showWindow() {
-        // Ensure the view reflects the latest settings
-        hostingController?.rootView = PreferencesView(
-            controller: controller,
-            settings: SettingsStore.shared,
-            onSettingsChanged: { [weak self] in
-                self?.onSettingsChanged?()
-            }
-        )
-        window?.layoutIfNeeded()
-
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
