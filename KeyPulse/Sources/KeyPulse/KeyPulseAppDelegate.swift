@@ -1,6 +1,13 @@
 import AppKit
 import os.log
 
+// MARK: - Type-Safe Notification Names
+
+extension NSNotification.Name {
+    /// Posted when the Advanced tab's "Show Debug Window" button is clicked.
+    static let showDebugWindow = NSNotification.Name("keypulse_showDebugWindow")
+}
+
 class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     private var controller: KeyPulseController?
     private var menuBarManager: MenuBarManager?
@@ -65,7 +72,12 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
 
         menuBarManager?.onLaunchAtLoginChanged = { [weak self] enabled in
             Logger.appDelegate.debug("Launch at login changed to \(enabled)")
-            self?.settingsStore.launchAtLogin = enabled
+            guard let self = self else { return }
+            // Attempt SMAppService registration synchronously
+            self.settingsStore.launchAtLogin = enabled
+            // Sync the menu state with the actual result (handles failure gracefully)
+            let actualState = self.settingsStore.launchAtLogin
+            self.menuBarManager?.updateLaunchAtLoginState(actualState)
         }
 
         menuBarManager?.onQuit = { [weak self] in
@@ -114,7 +126,7 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     /// For example, the Advanced tab's "Show Debug Window" button posts a notification.
     private func registerNotificationObservers() {
         NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("keypulse_showDebugWindow"),
+            forName: .showDebugWindow,
             object: nil,
             queue: .main
         ) { [weak self] _ in

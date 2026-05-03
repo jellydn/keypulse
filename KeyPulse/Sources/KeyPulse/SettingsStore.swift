@@ -231,6 +231,9 @@ final class SettingsStore: ObservableObject {
         isMuted = Defaults.isMuted
         isEnabled = Defaults.isEnabled
         pitchRandomization = Defaults.pitchRandomization
+        // Invalidate launch-at-login cache so next read queries fresh SMAppService state
+        cachedLaunchAtLoginStatus = nil
+        lastStatusCacheTime = nil
     }
 
     // MARK: - Initialization
