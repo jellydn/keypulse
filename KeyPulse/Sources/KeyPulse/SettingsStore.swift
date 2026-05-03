@@ -1,5 +1,6 @@
 import Foundation
 import ServiceManagement
+import os.log
 
 /// Persistent storage for user settings using UserDefaults.
 /// Handles saving and loading of profile, volume, mute state, and enabled state.
@@ -151,7 +152,7 @@ final class SettingsStore {
                         try service.register()
                         UserDefaults.standard.set(true, forKey: Keys.launchAtLogin)
                     } catch {
-                        print("Failed to register for launch at login: \(error)")
+                        Logger.settingsStore.error("Failed to register for launch at login: \(error.localizedDescription)")
                         // Invalidate cache on failure so next read queries fresh state
                         cachedLaunchAtLoginStatus = nil
                     }
@@ -163,7 +164,7 @@ final class SettingsStore {
                         try service.unregister()
                         UserDefaults.standard.set(false, forKey: Keys.launchAtLogin)
                     } catch {
-                        print("Failed to unregister from launch at login: \(error)")
+                        Logger.settingsStore.error("Failed to unregister from launch at login: \(error.localizedDescription)")
                         // Invalidate cache on failure so next read queries fresh state
                         cachedLaunchAtLoginStatus = nil
                     }

@@ -1,4 +1,5 @@
 import AppKit
+import os.log
 
 /// Manages the menu bar UI including status item, menu controls, and icon.
 final class MenuBarManager {
@@ -253,7 +254,7 @@ final class MenuBarManager {
             }
             onProfileChanged?(profile)
         } catch {
-            print("Failed to change profile: \(error)")
+            Logger.menuBarManager.error("Failed to change profile: \(error.localizedDescription)")
         }
     }
 

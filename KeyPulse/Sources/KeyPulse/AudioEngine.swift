@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import QuartzCore
 import os.lock
+import os.log
 
 /// Low-latency audio playback engine for mechanical keyboard sounds.
 /// Uses AVAudioEngine with multiple AVAudioPlayerNodes for concurrent playback.
@@ -255,7 +256,7 @@ final class AudioEngine {
         converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
 
         if let error = error {
-            print("Audio conversion error: \(error)")
+            Logger.audioEngine.error("Audio conversion error: \(error, privacy: .public)")
             return nil
         }
 

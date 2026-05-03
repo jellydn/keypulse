@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 import Carbon
 import AppKit
+import os.log
 
 /// Global keyboard event monitor using CGEventTap.
 ///
@@ -74,7 +75,7 @@ final class KeyboardMonitor {
     /// Opens System Settings to the Accessibility section for the user to manually enable permission.
     static func openAccessibilitySettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
-            print("KeyboardMonitor: Failed to construct accessibility settings URL")
+            Logger.keyboardMonitor.error("Failed to construct accessibility settings URL")
             return
         }
         NSWorkspace.shared.open(url)
@@ -91,13 +92,13 @@ final class KeyboardMonitor {
 
         // Check accessibility permission first
         guard Self.checkAccessibilityPermission() else {
-            print("KeyboardMonitor: Accessibility permission not granted")
+            Logger.keyboardMonitor.info("Accessibility permission not granted")
             return false
         }
 
         // Create the event tap
         guard createEventTap() else {
-            print("KeyboardMonitor: Failed to create event tap")
+            Logger.keyboardMonitor.error("Failed to create event tap")
             return false
         }
 
@@ -105,7 +106,7 @@ final class KeyboardMonitor {
         registerWakeObserver()
 
         isMonitoring = true
-        print("KeyboardMonitor: Started monitoring keyboard events")
+        Logger.keyboardMonitor.info("Started monitoring keyboard events")
         return true
     }
 
@@ -158,16 +159,16 @@ final class KeyboardMonitor {
         ) { [weak self] _ in
             guard let self = self, self.isMonitoring else { return }
 
-            print("KeyboardMonitor: System woke from sleep — restarting event tap")
+            Logger.keyboardMonitor.info("System woke from sleep — restarting event tap")
 
             // Tear down the old (now-invalid) tap
             self.tearDownEventTap()
 
             // Re-create the tap
             if self.createEventTap() {
-                print("KeyboardMonitor: Event tap restarted after wake")
+                Logger.keyboardMonitor.info("Event tap restarted after wake")
             } else {
-                print("KeyboardMonitor: Failed to restart event tap after wake")
+                Logger.keyboardMonitor.error("Failed to restart event tap after wake")
                 self.isMonitoring = false
             }
         }
@@ -187,7 +188,7 @@ final class KeyboardMonitor {
         tearDownEventTap()
 
         isMonitoring = false
-        print("KeyboardMonitor: Stopped monitoring keyboard events")
+        Logger.keyboardMonitor.info("Stopped monitoring keyboard events")
     }
 
     /// Tears down the event tap (disable, remove from run loop, invalidate).
