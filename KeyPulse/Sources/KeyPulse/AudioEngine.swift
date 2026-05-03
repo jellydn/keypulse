@@ -316,7 +316,7 @@ final class AudioEngine {
         converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
 
         if let error = error {
-            Logger.audioEngine.error("Audio conversion error: \(error, privacy: .public)")
+            Logger.audioEngine.error("Audio conversion error: \(error.localizedDescription)")
             return nil
         }
 

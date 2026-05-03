@@ -5,6 +5,7 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     private var controller: KeyPulseController?
     private var menuBarManager: MenuBarManager?
     private var debugWindowController: DebugWindowController?
+    private var preferencesWindowController: PreferencesWindowController?
     private let settingsStore = SettingsStore.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -12,6 +13,8 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
         applySettingsToController()
         setupMenuBar()
         setupDebugWindow()
+        setupPreferencesWindow()
+        registerNotificationObservers()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -74,6 +77,11 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
             Logger.appDelegate.debug("Debug window requested")
             self?.debugWindowController?.toggleWindow()
         }
+
+        menuBarManager?.onPreferencesRequested = { [weak self] in
+            Logger.appDelegate.debug("Preferences requested")
+            self?.preferencesWindowController?.showWindow()
+        }
     }
 
     private func setupDebugWindow() {
@@ -84,6 +92,34 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
 
         debugWindowController = DebugWindowController(controller: controller)
         Logger.appDelegate.info("Debug window controller initialized (Cmd+Opt+D to show)")
+    }
+
+    private func setupPreferencesWindow() {
+        guard let controller = controller else {
+            Logger.appDelegate.error("Cannot setup preferences window without controller")
+            return
+        }
+
+        preferencesWindowController = PreferencesWindowController(controller: controller)
+
+        // When settings change in Preferences, refresh the menu bar to stay in sync
+        preferencesWindowController?.onSettingsChanged = { [weak self] in
+            self?.menuBarManager?.refresh()
+        }
+
+        Logger.appDelegate.info("Preferences window controller initialized (Cmd+, to show)")
+    }
+
+    /// Registers notification observers for cross-component communication.
+    /// For example, the Advanced tab's "Show Debug Window" button posts a notification.
+    private func registerNotificationObservers() {
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("keypulse_showDebugWindow"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.debugWindowController?.showWindow()
+        }
     }
 
     private func setupController() {

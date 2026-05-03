@@ -42,12 +42,9 @@ final class KeyPulseController: ObservableObject {
     private var lastDiagnosticsPublishTime: TimeInterval = 0
 
     /// Minimum interval between @Published diagnostics updates (20 Hz = 50ms).
-    /// This prevents wasted Combine pipeline work — the DebugWindowController
-    /// throttles consumption to 10 Hz anyway, so publishing faster is useless.
+    /// This prevents wasted pipeline work — the DebugWindowController
+    /// consumes updates at its own pace via @ObservedObject.
     private let diagnosticsThrottleInterval: TimeInterval = 1.0 / 20.0
-
-    /// Cancellable for throttling diagnostic updates.
-    private var diagnosticsUpdateCancellable: AnyCancellable?
 
     /// Creates a new controller with the specified profile.
     /// - Parameter initialProfile: The initial sound profile to load (defaults to .linear).
@@ -153,8 +150,8 @@ final class KeyPulseController: ObservableObject {
             self.playRandomSample()
 
             // Throttled diagnostics update — only publish at ~20 Hz max.
-            // This avoids wasted @Published / Combine pipeline work since the
-            // DebugWindowController already throttles consumption to 10 Hz.
+            // This avoids wasted @Published pipeline work since the
+            // DebugWindowController consumes updates via @ObservedObject.
             let now = CFAbsoluteTimeGetCurrent()
             if now - self.lastDiagnosticsPublishTime >= self.diagnosticsThrottleInterval {
                 self.lastDiagnosticsPublishTime = now

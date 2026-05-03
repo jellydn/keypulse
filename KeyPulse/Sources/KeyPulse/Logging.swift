@@ -17,7 +17,7 @@ import os.log
 /// All logs are visible in Console.app filtered by subsystem "com.keypulse.app".
 extension Logger {
     /// Subsystem identifier matching the app's bundle ID.
-    private static let subsystem = "com.keypulse.app"
+    static let subsystem = "com.keypulse.app"
 
     /// Audio engine lifecycle and playback events.
     static let audioEngine = Logger(subsystem: subsystem, category: "AudioEngine")

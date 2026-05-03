@@ -1189,4 +1189,116 @@ final class KeyPulseTests: XCTestCase {
         diagnostics.latencyAverageMs = 25.0
         XCTAssertTrue(diagnostics.formattedDiagnostics().contains("FAIL"))
     }
+
+    // MARK: - Preferences Window Tests
+
+    func testPreferencesWindowControllerInit() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        // Creating the preferences window controller should not crash
+        let prefsController = PreferencesWindowController(controller: controller)
+        XCTAssertNotNil(prefsController)
+        XCTAssertFalse(prefsController.isWindowVisible, "Window should not be visible on init")
+    }
+
+    func testPreferencesWindowControllerShowHide() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        let prefsController = PreferencesWindowController(controller: controller)
+
+        // Show window
+        prefsController.showWindow()
+        XCTAssertTrue(prefsController.isWindowVisible, "Window should be visible after showWindow()")
+
+        // Hide window
+        prefsController.hideWindow()
+        XCTAssertFalse(prefsController.isWindowVisible, "Window should be hidden after hideWindow()")
+    }
+
+    func testSettingsStoreObservableObject() {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Verify SettingsStore conforms to ObservableObject
+        XCTAssertTrue(store is any ObservableObject, "SettingsStore should conform to ObservableObject")
+
+        // Verify objectWillChange publisher works by subscribing and checking for notification
+        var changeCount = 0
+        let cancellable = store.objectWillChange.sink { _ in
+            changeCount += 1
+        }
+
+        // Change a setting — should trigger objectWillChange
+        store.volume = 50
+        XCTAssertEqual(changeCount, 1, "Changing volume should trigger objectWillChange once")
+
+        // Change another setting
+        store.isMuted = true
+        XCTAssertEqual(changeCount, 2, "Changing isMuted should trigger objectWillChange")
+
+        // Ensure cancellable is not released
+        _ = cancellable
+    }
+
+    func testPreferencesViewSettingsRoundTrip() throws {
+        // This tests that the SettingsStore (which PreferencesView binds to)
+        // correctly persists and retrieves settings
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Simulate the PreferencesView's binding behavior:
+        // The view reads from settings, user changes value, view writes back
+        let initialProfile = store.profile
+        XCTAssertEqual(initialProfile, .linear)
+
+        // User changes profile via segmented control (like PreferencesView does)
+        store.profile = .tactile
+        XCTAssertEqual(store.profile, .tactile)
+
+        // User changes volume via slider
+        store.volume = 75
+        XCTAssertEqual(store.volume, 75)
+
+        // User toggles mute
+        store.isMuted = true
+        XCTAssertTrue(store.isMuted)
+
+        // User toggles pitch variation
+        store.pitchRandomization = false
+        XCTAssertFalse(store.pitchRandomization)
+
+        // Verify all settings persisted
+        XCTAssertEqual(store.profile, .tactile)
+        XCTAssertEqual(store.volume, 75)
+        XCTAssertTrue(store.isMuted)
+        XCTAssertFalse(store.pitchRandomization)
+    }
+
+    func testPreferencesViewResetAllSettings() throws {
+        let store = SettingsStore.shared
+        store.resetToDefaults()
+
+        // Set non-default values (as PreferencesView's Reset would)
+        store.profile = .clicky
+        store.volume = 25
+        store.isMuted = true
+        store.isEnabled = false
+        store.pitchRandomization = false
+
+        // Verify non-default
+        XCTAssertEqual(store.profile, .clicky)
+        XCTAssertEqual(store.volume, 25)
+
+        // Simulate Reset All Settings
+        store.resetToDefaults()
+
+        // Verify all reset to defaults
+        XCTAssertEqual(store.profile, .linear)
+        XCTAssertEqual(store.volume, 100)
+        XCTAssertFalse(store.isMuted)
+        XCTAssertTrue(store.isEnabled)
+        XCTAssertTrue(store.pitchRandomization)
+    }
 }

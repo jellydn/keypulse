@@ -26,6 +26,7 @@ final class MenuBarManager {
     var onPitchVariationChanged: ((Bool) -> Void)?
     var onLaunchAtLoginChanged: ((Bool) -> Void)?
     var onDebugWindowRequested: (() -> Void)?
+    var onPreferencesRequested: (() -> Void)?
     var onQuit: (() -> Void)?
 
     /// Creates a new menu bar manager.
@@ -178,6 +179,15 @@ final class MenuBarManager {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Preferences...
+        let preferencesMenuItem = NSMenuItem(
+            title: "Preferences...",
+            action: #selector(showPreferences),
+            keyEquivalent: ","
+        )
+        preferencesMenuItem.target = self
+        menu.addItem(preferencesMenuItem)
+
         // Debug Window
         let debugMenuItem = NSMenuItem(
             title: "Debug Window",
@@ -294,6 +304,10 @@ final class MenuBarManager {
         let newState = !currentState
         launchAtLoginMenuItem?.state = newState ? .on : .off
         onLaunchAtLoginChanged?(newState)
+    }
+
+    @objc private func showPreferences() {
+        onPreferencesRequested?()
     }
 
     @objc private func showDebugWindow() {
