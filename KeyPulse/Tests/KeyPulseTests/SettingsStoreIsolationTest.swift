@@ -78,6 +78,39 @@ final class SettingsStoreIsolationTest: XCTestCase {
         suite.removePersistentDomain(forName: "test.roundtrip")
     }
 
+    // MARK: - Schema Versioning
+
+    func testSchemaVersionStampedOnFirstInit() {
+        let suite = UserDefaults(suiteName: "test.schema.init")!
+        suite.removePersistentDomain(forName: "test.schema.init")
+
+        // Fresh UserDefaults should have no schema version
+        XCTAssertEqual(suite.integer(forKey: "keypulse_schemaVersion"), 0)
+
+        // Creating a SettingsStore should stamp the current version
+        let store = SettingsStore(defaults: suite)
+        _ = store.profile
+        XCTAssertEqual(suite.integer(forKey: "keypulse_schemaVersion"), 1)
+
+        suite.removePersistentDomain(forName: "test.schema.init")
+    }
+
+    func testSchemaVersionNotDowngraded() {
+        let suite = UserDefaults(suiteName: "test.schema.nodowngrade")!
+        suite.removePersistentDomain(forName: "test.schema.nodowngrade")
+
+        // Simulate a future version (e.g., app downgraded after beta)
+        suite.set(99, forKey: "keypulse_schemaVersion")
+
+        // Creating a store should NOT downgrade the version
+        let store = SettingsStore(defaults: suite)
+        _ = store.profile
+        XCTAssertEqual(suite.integer(forKey: "keypulse_schemaVersion"), 99,
+                       "Schema version should not be downgraded by older app")
+
+        suite.removePersistentDomain(forName: "test.schema.nodowngrade")
+    }
+
     func testIsolatedStoreResetClearsOnlyOwnSuite() {
         let suiteA = UserDefaults(suiteName: "test.reset.a")!
         let suiteB = UserDefaults(suiteName: "test.reset.b")!

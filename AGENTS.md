@@ -1,51 +1,47 @@
 # KeyPulse
 
-macOS menu bar app that plays mechanical keyboard sounds on every keystroke. Written in Swift, targets macOS 13+.
-
-## Architecture
-
-- **LSUIElement app** (no Dock icon, menu bar only) via `LSUIElement = YES` in Info.plist
-- Core types: `AudioEngine` (AVAudioEngine + AVAudioPlayerNode), `KeyboardMonitor` (CGEventTap), `KeyPulseController` (wiring), `SettingsStore` (UserDefaults), `SoundProfile` enum
-- Sound assets: `Resources/Sounds/{linear,tactile,clicky}/` — each profile has ≥4 WAV files (16-bit, 44.1kHz, <100ms)
-- Bundle ID: `com.keypulse.app`
-
-## Ralph Development Loop
-
-This project uses [Ralph](scripts/ralph/) for autonomous agent-driven development.
-
-- **PRD**: `scripts/ralph/prd.json` — defines user stories with priority order and `passes` flags
-- **Progress**: `scripts/ralph/progress.txt` — append-only log; top has `## Codebase Patterns` section
-- **Branch**: `ralph/keypulse-mvp` (from PRD `branchName`)
-- **Commit format**: `feat: [Story ID] - [Story Title]` (e.g. `feat: US-001 - Scaffold Swift macOS menu bar app project`)
-- **Completion signal**: `<promise>COMPLETE</promise>` in agent output stops the loop
-- **One story per iteration**, highest-priority `passes: false` story first
-
-Quality gates per story: typecheck → build → test pass before commit. Update PRD `passes: true` after commit.
+macOS menu bar app (LSUIElement) that plays mechanical keyboard sounds on keystroke. Swift 5.9+, macOS 13+, SwiftPM.
 
 ## Build & Test
 
+All commands run from project root via `just`, or directly in `KeyPulse/`:
+
 ```
-xcodebuild -scheme KeyPulse build
-xcodebuild -scheme KeyPulse test
+just build          # cd KeyPulse && swift build
+just test           # cd KeyPulse && swift test
+just run            # cd KeyPulse && swift run  (requires Accessibility permission)
+just fmt            # swift-format format --in-place --recursive Sources/
 ```
 
-No npm/bun/pip — this is a pure Swift/Xcode project.
+Alternative: `xcodebuild -scheme KeyPulse` works from `KeyPulse/` too.
 
-## Key Constraints
+## Architecture
 
-- Accessibility permission required at runtime (`AXIsProcessTrustedWithOptions`) for global keyboard hook
-- `NSAccessibilityUsageDescription` must be in Info.plist
-- Audio latency target: <20ms trigger-to-output (pre-load buffers into `AVAudioPCMBuffer`)
-  - **Measured**: Average ~1.6ms, Max ~10.7ms on Apple Silicon Mac (see `AudioEngine.latencyReport()`)
-  - Latency measured using `CACurrentMediaTime()` from QuartzCore (mach absolute time)
-  - Statistics available: `averageLatency`, `maxLatency`, `minLatency`, `latencyMeasurementCount`
-- Pitch randomization: ±5% via `AVAudioUnitTimePitch`
-- Launch-at-login uses `SMAppService.mainApp` (macOS 13+ API, no LSSharedFileList)
+- **Entrypoint**: `KeyPulse/Sources/KeyPulse/KeyPulse.swift` (`@main` struct)
+- **Wiring**: `KeyPulseAppDelegate` → `KeyPulseController` (owns `KeyboardMonitor` + `AudioEngine`)
+- **Core types**: `AudioEngine` (8 round-robin `AVAudioPlayerNode`), `KeyboardMonitor` (CGEventTap), `MenuBarManager` (NSStatusItem), `SettingsStore` (singleton, UserDefaults), `SoundProfile` enum, `DiagnosticsData` (Equatable struct)
+- **Sound assets**: `Resources/Sounds/` — files named `{profile}_key_{nn}.wav` (profiles: linear, tactile, clicky)
 
-## Resource Handling (SwiftPM)
+## Key Constraints (Hard-Earned)
 
-- Use `.process("Resources")` in Package.swift to bundle resources
-- **Important**: SwiftPM flattens directory structure - subdirectory hierarchy is lost in the final bundle
-- Use unique filenames across all resources (e.g., `linear_key_01.wav` not `key_01.wav` in multiple folders)
-- Access resources via `Bundle.module.url(forResource:withExtension:)` - auto-generated for targets with resources
-- Resource bundle is separate from executable; tests use `KeyPulse_KeyPulse.bundle` within the xctest package
+- **SwiftPM flattens resource directories**. All 12 WAV filenames must be globally unique or SwiftPM errors on build (`linear_key_01.wav`, not `key_01.wav` in subdirs)
+- **Resource access**: `Bundle.module.url(forResource:withExtension:)` — test resource bundle is `KeyPulse_KeyPulse.bundle`
+- **Pitch randomization**: Uses `AVAudioPlayerNode.rate` (±5%), NOT `AVAudioUnitTimePitch`
+- **Modifier keys**: `CGEventType.flagsChanged` events use sentinel key code `0xFF` — event mask must include both `.keyDown` and `.flagsChanged`
+- **SettingsStore quirk**: `object(forKey:)` check needed for Bool/Int to distinguish "unset" from `0`/`false`; injectable `UserDefaults` for test isolation
+- **Latency measurement**: `CACurrentMediaTime()` from QuartzCore; 100-sample history cap; `latencyReport()` for verification
+- **Controller must be retained** as property on AppDelegate or it deallocates
+
+## Debug Window
+
+Shortcut: `Cmd+Opt+D`. Floating SwiftUI window (360x420, NSHostingController). Combine binding throttled to 10Hz.
+
+## Ralph Autonomous Development
+
+`scripts/ralph/prd.json` defines user stories — **all 13 stories pass** (MVP complete). Active branch: `ralph/keypulse-mvp`. If adding new stories, update `passes: false` and follow commit format `feat: [Story ID] - [Title]`.
+
+Pre-commit runs `swift build` + `swift test` via `prek` (prek.toml).
+
+## Tests
+
+19 test files in `KeyPulse/Tests/KeyPulseTests/`. Tests use `@testable import KeyPulse`. AudioEngine tests start an actual engine (works in CI on macOS). Some tests (accessibility, SMAppService) are conditional.

@@ -24,6 +24,7 @@ final class SettingsStore {
 
     /// UserDefaults keys for stored settings.
     private enum Keys {
+        static let schemaVersion = "keypulse_schemaVersion"
         static let profile = "keypulse_profile"
         static let volume = "keypulse_volume"
         static let isMuted = "keypulse_isMuted"
@@ -31,6 +32,10 @@ final class SettingsStore {
         static let pitchRandomization = "keypulse_pitchRandomization"
         static let launchAtLogin = "keypulse_launchAtLogin"
     }
+
+    /// Current settings schema version. Increment when adding/renaming/removing keys
+    /// and add a migration in migrateIfNeeded().
+    private static let currentSchemaVersion = 1
 
     /// Default values for settings.
     private enum Defaults {
@@ -227,6 +232,28 @@ final class SettingsStore {
     ///   Use a unique suite name for isolated test execution.
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        migrateIfNeeded()
+    }
+
+    /// Runs schema migrations when the stored version is older than current.
+    /// Add migration blocks here when incrementing currentSchemaVersion.
+    private func migrateIfNeeded() {
+        let storedVersion = defaults.integer(forKey: Keys.schemaVersion)
+
+        // Fresh install: stamp current version, no migration needed
+        if storedVersion == 0 {
+            defaults.set(Self.currentSchemaVersion, forKey: Keys.schemaVersion)
+            return
+        }
+
+        // Future migrations go here:
+        // if storedVersion < 2 { migrateV1toV2() }
+        // if storedVersion < 3 { migrateV2toV3() }
+
+        // Stamp current version after all migrations complete
+        if storedVersion < Self.currentSchemaVersion {
+            defaults.set(Self.currentSchemaVersion, forKey: Keys.schemaVersion)
+        }
     }
 
     // MARK: - Private Methods
