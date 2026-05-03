@@ -23,6 +23,7 @@ Arguments:
 
 Options:
   -h, --help       Show this help message and exit
+  --once           Run a single iteration (shorthand for 1)
 
 Examples:
   # Run with defaults (amp, 10 iterations)
@@ -40,6 +41,9 @@ Examples:
   # Run pi with thinking level
   ./ralph.sh 10 pi claude-sonnet:high
 
+  # Run a single iteration (shorthand for ./ralph.sh 1)
+  ./ralph.sh --once
+
 Files:
   prompt-amp.md       - System prompt for amp CLI
   prompt-opencode.md  - System prompt for opencode CLI
@@ -52,7 +56,7 @@ Completion Signal:
 EOF
 }
 
-# Parse arguments for --help before positional args
+# Parse arguments for --help and --once before positional args
 for arg in "$@"; do
 	if [ "$arg" = "--help" ] || [ "$arg" = "-h" ]; then
 		show_help
@@ -60,10 +64,37 @@ for arg in "$@"; do
 	fi
 done
 
+# Normalize --once to max_iterations=1 before positional parsing
+ARGS=()
+ONCE_MODE=false
+for arg in "$@"; do
+	if [ "$arg" = "--once" ]; then
+		ONCE_MODE=true
+	else
+		ARGS+=("$arg")
+	fi
+done
+
+if [ "$ONCE_MODE" = true ]; then
+	set -- "${ARGS[@]}"
+	# After stripping --once, $1 becomes max_iterations
+	# If no args left, default to 1 iteration
+	if [ ${#ARGS[@]} -eq 0 ]; then
+		set -- "1"
+	fi
+fi
+
 MAX_ITERATIONS=${1:-10}
 CLI_TOOL=${2:-amp}
 MODEL=${3:-}
 SHARE=${4:-false}
+
+# Validate max_iterations is a positive integer
+if ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || [ "$MAX_ITERATIONS" -lt 1 ]; then
+	echo "Error: max_iterations must be a positive integer, got '$MAX_ITERATIONS'" >&2
+	echo "Run './ralph.sh --help' for usage." >&2
+	exit 1
+fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROMPT_FILE="$SCRIPT_DIR/prompt-$CLI_TOOL.md"
 

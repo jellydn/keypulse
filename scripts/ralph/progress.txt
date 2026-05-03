@@ -412,3 +412,22 @@
   - Setting UserDefaults from SwiftUI bindings works correctly because PreferencesView uses Binding(get/set) that writes to SettingsStore
   - All 135 tests pass, build succeeds with no warnings
 ---
+
+## 2026-05-03 19:35 - US-015
+- **Implemented:** Polish menu tray — SF Symbol icons, header menu item, alternate menu, accessibility label
+- **Files changed:**
+  - `KeyPulse/Sources/KeyPulse/MenuBarManager.swift` - Replaced custom-drawn icon with SF Symbols (keyboard.fill for enabled+unmuted, keyboard outline for disabled, keyboard+nosign composite for muted). Added non-clickable header NSMenuItem with attributed string (KeyPulse — <Profile>, <volume>% — <muted/active>). Added right-click/option-click alternate menu (compact with just Quit) via sendAction(on:) pattern. Added accessibility label on status item button. Added icon caching per state. Added static iconSymbolName(enabled:muted:) pure function for testability. All action handlers now call syncMenuState() which updates icon, header, and all menu items.
+  - `KeyPulse/Tests/KeyPulseTests/KeyPulseTests.swift` - Added 4 unit tests for iconSymbolName: enabledUnmuted, enabledMuted, disabled, disabledTakesPrecedence
+  - `AGENTS.md` - Added Key Constraints for SF Symbol icons, muted icon compositing, alternate menu pattern, and testable icon logic
+  - `scripts/ralph/prd.json` - Marked US-015 as passing
+- **Learnings for future iterations:**
+  - SF Symbol icons: `NSImage(systemSymbolName:accessibilityDescription:)` with `isTemplate = true` works perfectly for menu bar
+  - Muted icon: No built-in `keyboard.slash` exists — must composite `keyboard` + `nosign` using NSImage drawing handler
+  - Icon caching: Cache generated images per state (enabled+unmuted, disabled, muted) to avoid recompositing
+  - Alternate menu pattern: `statusItem?.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])` + custom handler checks event type/modifierFlags to swap menus before performClick
+  - Header menu item: Use `NSMenuItem` with `isEnabled = false` and `attributedTitle` (NSAttributedString) for non-interactive state display
+  - Accessibility: `statusItem?.button?.setAccessibilityLabel(...)` for VoiceOver support
+  - Static pure function `iconSymbolName(enabled:muted:) -> String` enables unit testing without NSApp context
+  - syncMenuState() is the single sync point — all action handlers call it instead of updating individual items
+  - All 135 tests pass (4 new), build succeeds with no warnings
+---
