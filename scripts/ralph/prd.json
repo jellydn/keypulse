@@ -222,7 +222,7 @@
         "Window has a `Copy diagnostics` button that copies a plain-text snapshot (all fields + bundle id + version + macOS version) to the clipboard",
         "Window does NOT open automatically on launch (opt-in only)",
         "Add `KeyPulseController.diagnostics()` returning a struct with the values above; the window binds to it via Combine `@Published` or NotificationCenter so updates are real-time without polling more than 10 Hz",
-        "Add unit tests for `diagnostics()` shape, `Test Sound` action increments the keystroke counter, `Reset stats` clears `latencyMeasurementCount`",
+        "Add unit tests for `diagnostics()` shape, `Test Sound` action increments the keystroke counter, `Reset stats` clears `latencyMeasurementCount`, profile switcher round-trips (set Linear -> diagnostics reports Linear) and stays in sync when set externally",
         "Document the Debug Window in `README.md` with a screenshot placeholder and the keyboard shortcut",
         "Typecheck passes",
         "Tests pass"

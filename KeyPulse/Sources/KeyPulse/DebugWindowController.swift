@@ -1,10 +1,12 @@
 import AppKit
-import Combine
 import SwiftUI
 
 /// Manages the Debug Window for live diagnostics and testing.
 /// Provides a floating window showing keystroke stats, latency metrics,
 /// and controls for testing sound profiles.
+///
+/// Architecture: passes the KeyPulseController (ObservableObject) directly to DebugView.
+/// SwiftUI's @ObservedObject handles reactivity — no manual view recreation needed.
 final class DebugWindowController: NSObject, NSWindowDelegate {
     /// The controller being monitored.
     private weak var controller: KeyPulseController?
@@ -14,9 +16,6 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
 
     /// The SwiftUI hosting controller.
     private var hostingController: NSHostingController<DebugView>?
-
-    /// Cancellable for Combine subscriptions.
-    private var cancellables = Set<AnyCancellable>()
 
     /// Window frame autosave name for persistence.
     private let windowFrameName = "KeyPulseDebugWindow"
@@ -32,7 +31,6 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
         self.controller = controller
         super.init()
         setupWindow()
-        setupSubscriptions()
     }
 
     deinit {
@@ -41,32 +39,12 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - Window Management
 
-    /// Sets up the debug window.
+    /// Sets up the debug window with SwiftUI view bound to the controller.
     private func setupWindow() {
-        // Create the SwiftUI view
-        let debugView = DebugView(
-            diagnostics: controller?.diagnosticsData ?? DiagnosticsData(),
-            onProfileChanged: { [weak self] profile in
-                guard let controller = self?.controller else { return }
-                do {
-                    try controller.setProfile(profile)
-                } catch {
-                    controller.onError?(error)
-                }
-            },
-            onTestSound: { [weak self] in
-                self?.controller?.testPlay()
-            },
-            onTestAllProfiles: { [weak self] in
-                self?.controller?.testAllProfiles()
-            },
-            onResetStats: { [weak self] in
-                self?.controller?.resetStats()
-            },
-            onCopyDiagnostics: { [weak self] in
-                self?.copyDiagnosticsToClipboard()
-            }
-        )
+        guard let controller = controller else { return }
+
+        // Create the SwiftUI view — passes controller directly for @ObservedObject binding
+        let debugView = DebugView(controller: controller)
 
         // Create hosting controller
         hostingController = NSHostingController(rootView: debugView)
@@ -93,51 +71,6 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
         self.window = window
     }
 
-    /// Sets up Combine subscriptions for real-time updates.
-    private func setupSubscriptions() {
-        guard let controller = controller else { return }
-
-        // Subscribe to diagnostics data changes, throttled to 10 Hz max
-        controller.$diagnosticsData
-            .throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)
-            .sink { [weak self] diagnostics in
-                self?.updateView(with: diagnostics)
-            }
-            .store(in: &cancellables)
-    }
-
-    /// Updates the SwiftUI view with new diagnostics data.
-    private func updateView(with diagnostics: DiagnosticsData) {
-        guard let hostingController = hostingController else { return }
-
-        // Update the view by creating a new root view with updated data
-        let debugView = DebugView(
-            diagnostics: diagnostics,
-            onProfileChanged: { [weak self] profile in
-                guard let controller = self?.controller else { return }
-                do {
-                    try controller.setProfile(profile)
-                } catch {
-                    controller.onError?(error)
-                }
-            },
-            onTestSound: { [weak self] in
-                self?.controller?.testPlay()
-            },
-            onTestAllProfiles: { [weak self] in
-                self?.controller?.testAllProfiles()
-            },
-            onResetStats: { [weak self] in
-                self?.controller?.resetStats()
-            },
-            onCopyDiagnostics: { [weak self] in
-                self?.copyDiagnosticsToClipboard()
-            }
-        )
-
-        hostingController.rootView = debugView
-    }
-
     // MARK: - Public Methods
 
     /// Shows the debug window.
@@ -160,15 +93,6 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Copies current diagnostics to the clipboard.
-    private func copyDiagnosticsToClipboard() {
-        guard let diagnostics = controller?.diagnostics() else { return }
-
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(diagnostics.formattedDiagnostics(), forType: .string)
-    }
-
     // MARK: - NSWindowDelegate
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -181,16 +105,13 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
 // MARK: - SwiftUI Views
 
 /// SwiftUI view for the debug window content.
+/// Uses @ObservedObject to reactively bind to the controller's published diagnostics.
 struct DebugView: View {
-    /// Current diagnostics data.
-    let diagnostics: DiagnosticsData
+    /// The controller providing live diagnostics data.
+    @ObservedObject var controller: KeyPulseController
 
-    /// Callbacks for user actions.
-    let onProfileChanged: (SoundProfile) -> Void
-    let onTestSound: () -> Void
-    let onTestAllProfiles: () -> Void
-    let onResetStats: () -> Void
-    let onCopyDiagnostics: () -> Void
+    /// Convenience accessor for current diagnostics snapshot.
+    private var diagnostics: DiagnosticsData { controller.diagnosticsData }
 
     var body: some View {
         ScrollView {
@@ -292,7 +213,13 @@ struct DebugView: View {
             // Profile switcher
             Picker("Profile:", selection: Binding(
                 get: { diagnostics.activeProfile },
-                set: { onProfileChanged($0) }
+                set: { profile in
+                    do {
+                        try controller.setProfile(profile)
+                    } catch {
+                        controller.onError?(error)
+                    }
+                }
             )) {
                 Text("Linear").tag(SoundProfile.linear)
                 Text("Tactile").tag(SoundProfile.tactile)
@@ -434,23 +361,24 @@ struct DebugView: View {
 
             HStack(spacing: 8) {
                 Button("Test Sound") {
-                    onTestSound()
+                    controller.testPlay()
                 }
                 .disabled(diagnostics.isMuted)
 
                 Button("Test All") {
-                    onTestAllProfiles()
+                    controller.testAllProfiles()
                 }
                 .disabled(diagnostics.isMuted)
             }
 
             HStack(spacing: 8) {
                 Button("Reset Stats") {
-                    onResetStats()
+                    controller.resetStats()
                 }
 
                 Button("Copy Diags") {
-                    onCopyDiagnostics()
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(diagnostics.formattedDiagnostics(), forType: .string)
                 }
             }
         }
