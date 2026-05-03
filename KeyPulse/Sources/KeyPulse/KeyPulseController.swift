@@ -18,6 +18,9 @@ final class KeyPulseController: ObservableObject {
     /// Whether the controller is enabled (processing keystrokes).
     @Published var isEnabled: Bool = true
 
+    /// Whether accessibility permission is granted for keyboard monitoring.
+    @Published private(set) var isAccessibilityPermissionGranted = false
+
     /// Error handler for runtime issues.
     var onError: ((Error) -> Void)?
 
@@ -76,12 +79,25 @@ final class KeyPulseController: ObservableObject {
     /// - Returns: True if monitoring started successfully, false if accessibility permission is missing.
     @discardableResult
     func start() -> Bool {
-        return keyboardMonitor.start()
+        let started = keyboardMonitor.start()
+        isAccessibilityPermissionGranted = started
+        return started
     }
 
     /// Stops monitoring keyboard events.
     func stop() {
         keyboardMonitor.stop()
+    }
+
+    /// Re-checks accessibility permission and restarts monitoring if newly granted.
+    /// - Returns: True if permission is now granted and monitoring is active.
+    @discardableResult
+    func recheckAccessibilityPermission() -> Bool {
+        let granted = keyboardMonitor.recheckPermissionAndRestart()
+        if granted != isAccessibilityPermissionGranted {
+            isAccessibilityPermissionGranted = granted
+        }
+        return granted
     }
 
     /// Changes the current sound profile.
@@ -164,6 +180,14 @@ final class KeyPulseController: ObservableObject {
             guard let self = self else { return }
             self.updateModifierFlags(flags)
         }
+
+        // Wire unexpected monitoring stop (e.g., permission revocation) to update state
+        keyboardMonitor.onMonitoringStopped = { [weak self] in
+            guard let self = self else { return }
+            if self.isAccessibilityPermissionGranted {
+                self.isAccessibilityPermissionGranted = false
+            }
+        }
     }
 
     /// Updates the modifier flags in diagnostics data.
@@ -180,7 +204,7 @@ final class KeyPulseController: ObservableObject {
         diagnosticsData.totalKeystrokes = totalKeystrokes
         diagnosticsData.lastKeyCode = lastKeyCode
         diagnosticsData.isLastKeyModifier = isLastKeyModifier
-        diagnosticsData.lastKeyDisplayName = keyCodeDisplayName(lastKeyCode)
+        diagnosticsData.lastKeyDisplayName = isLastKeyModifier ? "Modifier (flagsChanged)" : keyCodeDisplayName(lastKeyCode)
         diagnosticsData.activeProfile = currentProfile
         diagnosticsData.lastSampleIndex = lastSampleIndex
         diagnosticsData.lastSampleFilename = SoundAssets.sampleURL(for: currentProfile, index: lastSampleIndex)?.lastPathComponent ?? "-"
@@ -190,6 +214,10 @@ final class KeyPulseController: ObservableObject {
         diagnosticsData.latencyMinMs = audioEngine.minLatency * 1000
         diagnosticsData.latencyMaxMs = audioEngine.maxLatency * 1000
         diagnosticsData.latencySampleCount = audioEngine.latencyMeasurementCount
+
+        // Security state
+        diagnosticsData.isSecureInputDetected = keyboardMonitor.isSecureInputDetected
+        diagnosticsData.isAccessibilityPermissionGranted = isAccessibilityPermissionGranted
 
         // Settings state
         diagnosticsData.volumePercent = volume
@@ -205,9 +233,6 @@ final class KeyPulseController: ObservableObject {
     /// Returns a human-readable name for a key code.
     /// Internal for performance testing; logically a pure function with no side effects.
     func keyCodeDisplayName(_ keyCode: UInt16) -> String {
-        if keyCode == 0xFF {
-            return "Modifier (flagsChanged)"
-        }
         // Common key code mappings
         switch keyCode {
         case 0: return "A"

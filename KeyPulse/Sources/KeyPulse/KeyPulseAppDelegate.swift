@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import os.log
 
 // MARK: - Type-Safe Notification Names
@@ -14,6 +15,7 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
     private var debugWindowController: DebugWindowController?
     private var preferencesWindowController: PreferencesWindowController?
     private let settingsStore = SettingsStore.shared
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupController()
@@ -22,6 +24,17 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
         setupDebugWindow()
         setupPreferencesWindow()
         registerNotificationObservers()
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard let controller = controller else { return }
+        if !controller.isAccessibilityPermissionGranted {
+            let granted = controller.recheckAccessibilityPermission()
+            if granted {
+                Logger.appDelegate.info("Accessibility permission granted — monitoring resumed")
+                menuBarManager?.refresh()
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -146,6 +159,16 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
             controller?.onError = { error in
                 Logger.appDelegate.error("Controller error: \(error.localizedDescription)")
             }
+
+            // Observe permission-state changes to auto-refresh the menu bar
+            controller?.$isAccessibilityPermissionGranted
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] granted in
+                    Logger.appDelegate.info("Accessibility permission state changed to \(granted)")
+                    self?.menuBarManager?.refresh()
+                }
+                .store(in: &cancellables)
 
             // Start keyboard monitoring
             let started = controller?.start() ?? false

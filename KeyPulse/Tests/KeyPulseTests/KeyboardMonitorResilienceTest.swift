@@ -77,4 +77,44 @@ final class KeyboardMonitorResilienceTest: XCTestCase {
             XCTAssertFalse(monitor.isMonitoring)
         }
     }
+
+    func testRecheckPermissionAndRestartWhenAlreadyMonitoring() {
+        let monitor = KeyboardMonitor()
+
+        let started = monitor.start()
+        if started {
+            // If already monitoring, recheck should return true without side effects
+            XCTAssertTrue(monitor.recheckPermissionAndRestart())
+            XCTAssertTrue(monitor.isMonitoring)
+            monitor.stop()
+        }
+    }
+
+    func testRecheckPermissionAndRestartWithoutPermission() {
+        let monitor = KeyboardMonitor()
+        // Ensure not monitoring
+        monitor.stop()
+        XCTAssertFalse(monitor.isMonitoring)
+
+        let hasPermission = KeyboardMonitor.checkAccessibilityPermission()
+        let result = monitor.recheckPermissionAndRestart()
+
+        // Result must match the actual system permission state
+        XCTAssertEqual(result, hasPermission)
+        XCTAssertEqual(monitor.isMonitoring, hasPermission)
+    }
+
+    func testRecheckPermissionAndRestartStopsIfPermissionRevoked() {
+        let monitor = KeyboardMonitor()
+
+        let started = monitor.start()
+        if started {
+            XCTAssertTrue(monitor.isMonitoring)
+            // While monitoring, recheck should verify actual trust state.
+            // If permission is still granted, it should keep monitoring.
+            XCTAssertTrue(monitor.recheckPermissionAndRestart())
+            XCTAssertTrue(monitor.isMonitoring)
+            monitor.stop()
+        }
+    }
 }

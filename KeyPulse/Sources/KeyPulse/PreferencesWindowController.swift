@@ -119,7 +119,7 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
 /// SwiftUI view for the Preferences window content.
 struct PreferencesView: View {
     /// The controller for applying settings changes.
-    private weak var controller: KeyPulseController?
+    @ObservedObject var controller: KeyPulseController
 
     /// The settings store — single source of truth.
     @ObservedObject var settings: SettingsStore
@@ -131,7 +131,7 @@ struct PreferencesView: View {
     @State private var showResetConfirmation = false
 
     /// Initializes the preferences view with required dependencies.
-    init(controller: KeyPulseController?, settings: SettingsStore, onSettingsChanged: (() -> Void)? = nil) {
+    init(controller: KeyPulseController, settings: SettingsStore, onSettingsChanged: (() -> Void)? = nil) {
         self.controller = controller
         self.settings = settings
         self.onSettingsChanged = onSettingsChanged
@@ -165,14 +165,51 @@ struct PreferencesView: View {
 
     private var generalTab: some View {
         Form {
+            Section("Accessibility Permission") {
+                HStack {
+                    Image(systemName: controller.isAccessibilityPermissionGranted
+                        ? "checkmark.circle.fill"
+                        : "lock.fill")
+                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .green : .orange)
+                    Text(controller.isAccessibilityPermissionGranted
+                        ? "Granted"
+                        : "Required")
+                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .secondary : .primary)
+                }
+
+                if !controller.isAccessibilityPermissionGranted {
+                    Text("KeyPulse needs Accessibility permission to detect keystrokes.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 12) {
+                        Button("Request Access…") {
+                            KeyboardMonitor.requestAccessibilityPermission()
+                        }
+                        .help("Show the system permission dialog")
+
+                        Button("Open System Settings") {
+                            KeyboardMonitor.openAccessibilitySettings()
+                        }
+                        .help("Open System Settings > Privacy & Security > Accessibility")
+                    }
+                }
+            }
+
+            Divider()
+
             Toggle("Enabled", isOn: Binding(
                 get: { settings.isEnabled },
                 set: { newValue in
-                    controller?.isEnabled = newValue
+                    controller.isEnabled = newValue
                     settings.isEnabled = newValue
                     onSettingsChanged?()
                 }
             ))
+            .disabled(!controller.isAccessibilityPermissionGranted)
+            .help(controller.isAccessibilityPermissionGranted
+                ? "Process keystrokes and play sounds"
+                : "Enable Accessibility permission first")
 
             Divider()
 
@@ -202,11 +239,11 @@ struct PreferencesView: View {
                         get: { settings.profile },
                         set: { newProfile in
                             do {
-                                try controller?.setProfile(newProfile)
+                                try controller.setProfile(newProfile)
                                 settings.profile = newProfile
                                 onSettingsChanged?()
                             } catch {
-                                controller?.onError?(error)
+                                controller.onError?(error)
                             }
                         }
                     )) {
@@ -230,7 +267,7 @@ struct PreferencesView: View {
                             set: { newValue in
                                 let intValue = Int(newValue)
                                 settings.volume = intValue
-                                controller?.setVolume(intValue)
+                                controller.setVolume(intValue)
                                 onSettingsChanged?()
                             }
                         ), in: 0...100, step: 1)
@@ -249,7 +286,7 @@ struct PreferencesView: View {
                         get: { settings.isMuted },
                         set: { newValue in
                             settings.isMuted = newValue
-                            controller?.setMuted(newValue)
+                            controller.setMuted(newValue)
                             onSettingsChanged?()
                         }
                     ))
@@ -258,7 +295,7 @@ struct PreferencesView: View {
                         get: { settings.pitchRandomization },
                         set: { newValue in
                             settings.pitchRandomization = newValue
-                            controller?.setPitchRandomization(newValue)
+                            controller.setPitchRandomization(newValue)
                             onSettingsChanged?()
                         }
                     ))
@@ -269,7 +306,7 @@ struct PreferencesView: View {
 
                 // Test Sound button
                 Button("Test Sound") {
-                    controller?.testPlay()
+                    controller.testPlay()
                 }
                 .disabled(settings.isMuted)
             }
@@ -334,10 +371,10 @@ struct PreferencesView: View {
     /// Performs a full reset of all settings to defaults.
     private func performReset() {
         settings.resetToDefaults()
-        controller?.setVolume(settings.volume)
-        controller?.setMuted(settings.isMuted)
-        controller?.isEnabled = settings.isEnabled
-        controller?.setPitchRandomization(settings.pitchRandomization)
+        controller.setVolume(settings.volume)
+        controller.setMuted(settings.isMuted)
+        controller.isEnabled = settings.isEnabled
+        controller.setPitchRandomization(settings.pitchRandomization)
         onSettingsChanged?()
     }
 }

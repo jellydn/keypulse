@@ -184,27 +184,35 @@ final class KeyPulseTests: XCTestCase {
     // MARK: - MenuBarManager Tests
 
     func testMenuBarManagerIconSymbolName_enabledUnmuted() {
-        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false)
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false, permissionGranted: true)
         XCTAssertEqual(name, "keyboard.fill", "Enabled + unmuted should use keyboard.fill")
     }
 
     func testMenuBarManagerIconSymbolName_enabledMuted() {
-        let name = MenuBarManager.iconSymbolName(enabled: true, muted: true)
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: true, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Enabled + muted should use keyboard outline with overlay")
     }
 
     func testMenuBarManagerIconSymbolName_disabled() {
-        let name = MenuBarManager.iconSymbolName(enabled: false, muted: false)
+        let name = MenuBarManager.iconSymbolName(enabled: false, muted: false, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Disabled should use keyboard outline")
 
-        let nameMuted = MenuBarManager.iconSymbolName(enabled: false, muted: true)
+        let nameMuted = MenuBarManager.iconSymbolName(enabled: false, muted: true, permissionGranted: true)
         XCTAssertEqual(nameMuted, "keyboard", "Disabled + muted should still use keyboard outline")
     }
 
     func testMenuBarManagerIconSymbolName_disabledTakesPrecedence() {
         // When disabled, the icon should always be the outline regardless of mute state
-        let name = MenuBarManager.iconSymbolName(enabled: false, muted: true)
+        let name = MenuBarManager.iconSymbolName(enabled: false, muted: true, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Disabled state takes precedence over mute")
+    }
+
+    func testMenuBarManagerIconSymbolName_noPermission() {
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false, permissionGranted: false)
+        XCTAssertEqual(name, "keyboard", "No permission should use keyboard outline regardless of state")
+
+        let nameDisabled = MenuBarManager.iconSymbolName(enabled: false, muted: false, permissionGranted: false)
+        XCTAssertEqual(nameDisabled, "keyboard", "No permission + disabled should still use keyboard outline")
     }
 }
         }
@@ -384,6 +392,27 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertTrue(controller.isEnabled)
     }
 
+    func testKeyPulseControllerStartSetsPermissionFlag() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        let started = controller.start()
+        XCTAssertEqual(controller.isAccessibilityPermissionGranted, started,
+                       "isAccessibilityPermissionGranted must reflect start() result")
+    }
+
+    func testKeyPulseControllerRecheckAccessibilityPermission() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        let hasPermission = KeyboardMonitor.checkAccessibilityPermission()
+        let granted = controller.recheckAccessibilityPermission()
+
+        // Result must match the actual system permission state
+        XCTAssertEqual(granted, hasPermission)
+        XCTAssertEqual(controller.isAccessibilityPermissionGranted, hasPermission)
+    }
+
     func testKeyPulseControllerSelectRandomSampleIndex() throws {
         let controller = try KeyPulseController(initialProfile: .linear)
         defer { controller.stop() }
@@ -442,11 +471,8 @@ final class KeyPulseTests: XCTestCase {
 
             // The modifier key handling is tested through the KeyboardMonitor
             // which now includes flagsChanged events in its event mask.
-            // We verify here that the controller accepts the modifier key code (0xFF)
-            // and would play a sound when triggered.
-
-            // Since we can't easily synthesize CGEvent taps in unit tests,
-            // we verify the controller is in a state that would accept events
+            // Modifier events use isLastEventModifier instead of sentinel key code.
+            // We verify here that the controller is in a state that would accept events
             XCTAssertEqual(controller.sampleCount, 4)
         }
     }
@@ -944,6 +970,7 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertTrue(formatted.contains("Tactile"))
         XCTAssertTrue(formatted.contains("75%"))
         XCTAssertTrue(formatted.contains("PASS"))
+        XCTAssertTrue(formatted.contains("Accessibility Permission: Required"))
     }
 
     func testKeyPulseControllerDiagnostics() throws {
@@ -1156,6 +1183,11 @@ final class KeyPulseTests: XCTestCase {
         changed = DiagnosticsData()
         changed.isEnabled = false
         XCTAssertNotEqual(base, changed, "isEnabled difference must cause inequality")
+
+        // isAccessibilityPermissionGranted
+        changed = DiagnosticsData()
+        changed.isAccessibilityPermissionGranted = true
+        XCTAssertNotEqual(base, changed, "isAccessibilityPermissionGranted difference must cause inequality")
     }
 
     func testDiagnosticsDataEquatable_appInfoFields() {
