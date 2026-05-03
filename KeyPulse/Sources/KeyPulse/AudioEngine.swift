@@ -1,12 +1,16 @@
 import Foundation
 import AVFoundation
 import QuartzCore
+import os
 import os.log
 
 /// Low-latency audio playback engine for mechanical keyboard sounds.
 /// Uses AVAudioEngine with multiple AVAudioPlayerNodes for concurrent playback.
 /// All samples are pre-loaded into memory to eliminate file I/O during playback.
 final class AudioEngine {
+    /// Lock protecting mutable state accessed from both audio dispatch and main queues.
+    /// Used for: isMuted, isRunning, volume, isPitchRandomizationEnabled, buffers, latencyMeasurements, nextPlayerIndex.
+    private let stateLock = OSAllocatedUnfairLock()
     /// The underlying audio engine.
     private let engine = AVAudioEngine()
 
@@ -15,7 +19,8 @@ final class AudioEngine {
 
     /// Pre-loaded PCM buffers for the current profile.
     /// Index corresponds to sample index (0 to samplesPerProfile-1).
-    private var buffers: [AVAudioPCMBuffer] = []
+    /// Thread-safe backing — use stateLock for writes, play() reads under stateLock.
+    private var _buffers: [AVAudioPCMBuffer] = []
 
     /// Cached buffers for all profiles (pre-warmed for instant switching).
     /// Key: SoundProfile, Value: Array of 4 PCM buffers.
@@ -32,29 +37,54 @@ final class AudioEngine {
     private let concurrentPlayerCount = 8
 
     /// Index for round-robin player node selection.
-    /// All callers of play() arrive via DispatchQueue.main.async, so no lock is needed.
-    private var nextPlayerIndex = 0
+    private var _nextPlayerIndex = 0
 
     /// Whether the engine is currently running.
-    private(set) var isRunning = false
+    private var _isRunning = false
+
+    /// Volume level (0.0 to 1.0).
+    private var _volume: Float = 1.0
+
+    /// Mute state. When true, playback is short-circuited.
+    private var _isMuted = false
+
+    /// Pitch randomization state. When true, playback rate varies by ±5% per keystroke.
+    private var _isPitchRandomizationEnabled = false
+
+    /// Re-entrancy guard for configuration change handler.
+    private var _isRestarting = false
+
+    /// Latency measurements for performance monitoring.
+    private var _latencyMeasurements: [TimeInterval] = []
 
     /// Observer token for audio engine configuration changes (route changes, sample rate).
     private var configChangeObserver: NSObjectProtocol?
 
-    /// Volume level (0.0 to 1.0).
-    var volume: Float = 1.0 {
-        didSet {
-            // Clamp to valid range
-            volume = max(0.0, min(1.0, volume))
-            updateVolume()
-        }
+    // MARK: - Thread-Safe Accessors
+
+    /// Volume level (0.0 to 1.0). Thread-safe via stateLock.
+    var volume: Float {
+        get { stateLock.withLock { _volume } }
+        set { stateLock.withLock { _volume = max(0.0, min(1.0, newValue)) }; updateVolume() }
     }
 
-    /// Mute state. When true, playback is short-circuited.
-    var isMuted = false
+    /// Mute state. Thread-safe via stateLock.
+    var isMuted: Bool {
+        get { stateLock.withLock { _isMuted } }
+        set { stateLock.withLock { _isMuted = newValue } }
+    }
 
-    /// Pitch randomization state. When true, playback rate varies by ±5% per keystroke.
-    var isPitchRandomizationEnabled = false
+    /// Pitch randomization state. Thread-safe via stateLock.
+    var isPitchRandomizationEnabled: Bool {
+        get { stateLock.withLock { _isPitchRandomizationEnabled } }
+        set { stateLock.withLock { _isPitchRandomizationEnabled = newValue } }
+    }
+
+    /// Whether the engine is currently running. Thread-safe via stateLock.
+    private(set) var isRunning: Bool {
+        get { stateLock.withLock { _isRunning } }
+        set { stateLock.withLock { _isRunning = newValue } }
+    }
 
     /// Randomization range for pitch variation (±5% = 0.95 to 1.05).
     private let pitchRandomizationRange: ClosedRange<Float> = 0.95...1.05
@@ -129,6 +159,18 @@ final class AudioEngine {
         ) { [weak self] _ in
             guard let self = self, self.isRunning else { return }
 
+            // Re-entrancy guard: prevent recursive calls if engine.stop() triggers
+            // another configuration change notification while the engine is unstable.
+            let alreadyRestarting = self.stateLock.withLock {
+                if self._isRestarting { return true }
+                self._isRestarting = true
+                return false
+            }
+            guard !alreadyRestarting else {
+                Logger.audioEngine.info("Config change handler already running — suppressing nested invocation")
+                return
+            }
+
             Logger.audioEngine.info("Audio configuration changed — restarting engine")
 
             // Remember current profile to reload after restart
@@ -138,7 +180,10 @@ final class AudioEngine {
             self.engine.stop()
 
             // Clear caches — buffers were converted to the old format
-            self.buffers.removeAll()
+            self.stateLock.withLock {
+                self._buffers.removeAll()
+                self._isRestarting = false
+            }
             self.profileCache.removeAll()
             self.isPreWarmed = false
 
@@ -201,7 +246,9 @@ final class AudioEngine {
         // Check if profile is already cached (pre-warmed)
         if let cachedBuffers = profileCache[profile] {
             // Instant switch using cached buffers
-            buffers = cachedBuffers
+            stateLock.withLock {
+                _buffers = cachedBuffers
+            }
             currentProfile = profile
             return
         }
@@ -222,7 +269,10 @@ final class AudioEngine {
             newBuffers.append(buffer)
         }
 
-        buffers = newBuffers
+        let buffersToStore = newBuffers
+        stateLock.withLock {
+            _buffers = buffersToStore
+        }
         currentProfile = profile
     }
 
@@ -333,44 +383,49 @@ final class AudioEngine {
         // Capture trigger time for latency measurement
         let triggerTime = CACurrentMediaTime()
 
-        // Short-circuit if muted
-        guard !isMuted else { return }
-
-        // Validate engine state
-        guard isRunning else {
-            throw AudioEngineError.engineNotRunning
+        // Atomically snapshot engine state under the lock
+        let playbackState = stateLock.withLock { () -> (buffer: AVAudioPCMBuffer, playerIndex: Int, volume: Float, shouldRandomizePitch: Bool)? in
+            guard !_isMuted, _isRunning else { return nil }
+            guard sampleIndex >= 0, sampleIndex < _buffers.count else { return nil }
+            let idx = _nextPlayerIndex
+            _nextPlayerIndex = (_nextPlayerIndex + 1) % concurrentPlayerCount
+            return (_buffers[sampleIndex], idx, _volume, _isPitchRandomizationEnabled)
         }
 
-        // Validate sample index
-        guard sampleIndex >= 0 && sampleIndex < buffers.count else {
-            throw AudioEngineError.invalidSampleIndex
+        guard let state = playbackState else {
+            // Check which condition caused the nil return by re-reading under the lock.
+            // We must be careful: isMuted → silent return, notRunning → throw, bad index → throw.
+            let (muted, running, hasValidIndex) = stateLock.withLock {
+                (_isMuted, _isRunning, sampleIndex >= 0 && sampleIndex < _buffers.count)
+            }
+            if muted {
+                // Short-circuit: silent return, no error
+                return
+            }
+            if !running {
+                throw AudioEngineError.engineNotRunning
+            }
+            if !hasValidIndex {
+                throw AudioEngineError.invalidSampleIndex
+            }
+            // Shouldn't reach here, but handle gracefully
+            return
         }
 
-        // Get the pre-loaded buffer
-        let buffer = buffers[sampleIndex]
-
-        // Select player node using round-robin
-        let playerIndex = nextPlayerIndex
-        nextPlayerIndex = (nextPlayerIndex + 1) % concurrentPlayerCount
-
-        let player = playerNodes[playerIndex]
+        let player = playerNodes[state.playerIndex]
 
         // Apply pitch randomization if enabled
-        if isPitchRandomizationEnabled {
-            let rate = Float.random(in: pitchRandomizationRange)
-            player.rate = rate
+        if state.shouldRandomizePitch {
+            player.rate = Float.random(in: pitchRandomizationRange)
         } else {
             player.rate = 1.0
         }
 
         // Schedule and play the buffer
-        // Using nil for when makes it play immediately (lowest latency)
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
+        player.scheduleBuffer(state.buffer, at: nil, options: .interrupts, completionHandler: nil)
 
-        // Set volume on the player node before playing
-        player.volume = volume
-
-        // Start playback if not already playing
+        // Set volume and start playback
+        player.volume = state.volume
         if !player.isPlaying {
             player.play()
         }
@@ -390,74 +445,75 @@ final class AudioEngine {
 
     /// Returns the number of currently loaded buffers.
     var loadedBufferCount: Int {
-        return buffers.count
+        stateLock.withLock { _buffers.count }
     }
 
     /// Returns true if the specified profile is currently loaded.
     /// - Parameter profile: The profile to check.
     /// - Returns: True if this profile is loaded and ready to play.
     func isProfileLoaded(_ profile: SoundProfile) -> Bool {
-        return currentProfile == profile && buffers.count == SoundAssets.samplesPerProfile
+        stateLock.withLock {
+            currentProfile == profile && _buffers.count == SoundAssets.samplesPerProfile
+        }
     }
 
     // MARK: - Latency Measurement
-
-    /// Stores recent latency measurements for performance monitoring.
-    /// Values are in seconds (trigger-to-output time).
-    private var latencyMeasurements: [TimeInterval] = []
 
     /// Maximum number of latency measurements to keep in history.
     private let maxLatencyHistorySize = 100
 
     /// Measures and records the latency for a play() call.
-    /// Call this at the start of play() with the timestamp when play() was invoked.
+    /// Thread-safe via stateLock.
     /// - Parameter triggerTime: The timestamp when the keystroke was detected.
     func recordLatencyMeasurement(triggerTime: TimeInterval) {
         let outputTime = CACurrentMediaTime()
         let latency = outputTime - triggerTime
 
-        latencyMeasurements.append(latency)
-
-        // Keep only recent measurements
-        if latencyMeasurements.count > maxLatencyHistorySize {
-            latencyMeasurements.removeFirst(latencyMeasurements.count - maxLatencyHistorySize)
+        stateLock.withLock {
+            _latencyMeasurements.append(latency)
+            if _latencyMeasurements.count > maxLatencyHistorySize {
+                _latencyMeasurements.removeFirst(_latencyMeasurements.count - maxLatencyHistorySize)
+            }
         }
     }
 
     /// Returns the average latency from recent measurements.
     /// - Returns: Average latency in seconds, or 0 if no measurements available.
     var averageLatency: TimeInterval {
-        guard !latencyMeasurements.isEmpty else { return 0 }
-        let total = latencyMeasurements.reduce(0, +)
-        return total / Double(latencyMeasurements.count)
+        stateLock.withLock {
+            guard !_latencyMeasurements.isEmpty else { return 0 }
+            let total = _latencyMeasurements.reduce(0, +)
+            return total / Double(_latencyMeasurements.count)
+        }
     }
 
     /// Returns the maximum latency from recent measurements.
     /// - Returns: Maximum latency in seconds, or 0 if no measurements available.
     var maxLatency: TimeInterval {
-        return latencyMeasurements.max() ?? 0
+        stateLock.withLock { _latencyMeasurements.max() ?? 0 }
     }
 
     /// Returns the minimum latency from recent measurements.
     /// - Returns: Minimum latency in seconds, or 0 if no measurements available.
     var minLatency: TimeInterval {
-        return latencyMeasurements.min() ?? 0
+        stateLock.withLock { _latencyMeasurements.min() ?? 0 }
     }
 
     /// Returns the number of latency measurements collected.
     var latencyMeasurementCount: Int {
-        return latencyMeasurements.count
+        stateLock.withLock { _latencyMeasurements.count }
     }
 
     /// Clears all latency measurements.
     func resetLatencyMeasurements() {
-        latencyMeasurements.removeAll()
+        stateLock.withLock { _latencyMeasurements.removeAll() }
     }
 
     /// Returns a formatted latency report for debugging/verification.
     /// - Returns: A string with latency statistics.
     func latencyReport() -> String {
-        guard !latencyMeasurements.isEmpty else {
+        let count = stateLock.withLock { _latencyMeasurements.count }
+        guard count > 0 else {
             return "No latency measurements available"
         }
 
@@ -466,7 +522,7 @@ final class AudioEngine {
         let minMs = minLatency * 1000
 
         return """
-        Latency Statistics (\(latencyMeasurements.count) samples):
+        Latency Statistics (\(count) samples):
         - Average: \(String(format: "%.3f", avgMs)) ms
         - Maximum: \(String(format: "%.3f", maxMs)) ms
         - Minimum: \(String(format: "%.3f", minMs)) ms
