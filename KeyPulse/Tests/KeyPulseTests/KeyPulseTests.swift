@@ -392,6 +392,27 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertTrue(controller.isEnabled)
     }
 
+    func testKeyPulseControllerStartSetsPermissionFlag() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        let started = controller.start()
+        XCTAssertEqual(controller.isAccessibilityPermissionGranted, started,
+                       "isAccessibilityPermissionGranted must reflect start() result")
+    }
+
+    func testKeyPulseControllerRecheckAccessibilityPermission() throws {
+        let controller = try KeyPulseController(initialProfile: .linear)
+        defer { controller.stop() }
+
+        let hasPermission = KeyboardMonitor.checkAccessibilityPermission()
+        let granted = controller.recheckAccessibilityPermission()
+
+        // Result must match the actual system permission state
+        XCTAssertEqual(granted, hasPermission)
+        XCTAssertEqual(controller.isAccessibilityPermissionGranted, hasPermission)
+    }
+
     func testKeyPulseControllerSelectRandomSampleIndex() throws {
         let controller = try KeyPulseController(initialProfile: .linear)
         defer { controller.stop() }
@@ -949,6 +970,7 @@ final class KeyPulseTests: XCTestCase {
         XCTAssertTrue(formatted.contains("Tactile"))
         XCTAssertTrue(formatted.contains("75%"))
         XCTAssertTrue(formatted.contains("PASS"))
+        XCTAssertTrue(formatted.contains("Accessibility Permission: Required"))
     }
 
     func testKeyPulseControllerDiagnostics() throws {
@@ -1161,6 +1183,11 @@ final class KeyPulseTests: XCTestCase {
         changed = DiagnosticsData()
         changed.isEnabled = false
         XCTAssertNotEqual(base, changed, "isEnabled difference must cause inequality")
+
+        // isAccessibilityPermissionGranted
+        changed = DiagnosticsData()
+        changed.isAccessibilityPermissionGranted = true
+        XCTAssertNotEqual(base, changed, "isAccessibilityPermissionGranted difference must cause inequality")
     }
 
     func testDiagnosticsDataEquatable_appInfoFields() {

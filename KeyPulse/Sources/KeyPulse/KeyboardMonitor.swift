@@ -61,6 +61,9 @@ final class KeyboardMonitor {
     /// Callback for modifier flag changes. Called whenever shift/cmd/option/ctrl state changes.
     var onFlagsChanged: ((_ flags: CGEventFlags) -> Void)?
 
+    /// Callback for when monitoring stops unexpectedly (e.g., tap invalidation, permission revocation).
+    var onMonitoringStopped: (() -> Void)?
+
     /// Dedicated serial queue for keystroke → audio dispatch.
     /// Isolates audio playback from main thread jank, preventing keystroke
     /// queueing when the main thread is blocked by animations or sheet presentation.
@@ -107,9 +110,11 @@ final class KeyboardMonitor {
     /// Call this when the user returns from System Settings.
     /// - Returns: True if permission is now granted and monitoring is active.
     func recheckPermissionAndRestart() -> Bool {
-        guard !isMonitoring else { return true }
-        guard Self.checkAccessibilityPermission() else { return false }
-        return start()
+        guard Self.checkAccessibilityPermission() else {
+            if isMonitoring { stop() }
+            return false
+        }
+        return isMonitoring ? true : start()
     }
 
     // MARK: - Monitoring Control
@@ -283,6 +288,7 @@ final class KeyboardMonitor {
                     Logger.keyboardMonitor.error("Failed to recreate invalid event tap — disabling monitoring")
                     self.isMonitoring = false
                     self.stopHealthCheckTimer()
+                    self.onMonitoringStopped?()
                 }
             }
         }

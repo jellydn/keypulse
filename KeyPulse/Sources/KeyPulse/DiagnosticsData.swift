@@ -93,7 +93,7 @@ struct DiagnosticsData {
         - Muted: \(isMuted ? "Yes" : "No")
         - Pitch Variation: \(isPitchVariationEnabled ? "On" : "Off")
         - Secure Input: \(isSecureInputDetected ? "Yes (sounds suppressed)" : "No")
-        - Accessibility Permission: \(isAccessibilityPermissionGranted ? "Granted" : "Not Granted")
+        - Accessibility Permission: \(isAccessibilityPermissionGranted ? "Granted" : "Required")
         - Enabled: \(isEnabled ? "Yes" : "No")
 
         Modifier Flags:

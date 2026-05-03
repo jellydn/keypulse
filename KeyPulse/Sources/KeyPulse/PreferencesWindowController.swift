@@ -165,6 +165,39 @@ struct PreferencesView: View {
 
     private var generalTab: some View {
         Form {
+            Section("Accessibility Permission") {
+                HStack {
+                    Image(systemName: controller.isAccessibilityPermissionGranted
+                        ? "checkmark.circle.fill"
+                        : "lock.fill")
+                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .green : .orange)
+                    Text(controller.isAccessibilityPermissionGranted
+                        ? "Granted"
+                        : "Required")
+                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .secondary : .primary)
+                }
+
+                if !controller.isAccessibilityPermissionGranted {
+                    Text("KeyPulse needs Accessibility permission to detect keystrokes.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 12) {
+                        Button("Request Access…") {
+                            KeyboardMonitor.requestAccessibilityPermission()
+                        }
+                        .help("Show the system permission dialog")
+
+                        Button("Open System Settings") {
+                            KeyboardMonitor.openAccessibilitySettings()
+                        }
+                        .help("Open System Settings > Privacy & Security > Accessibility")
+                    }
+                }
+            }
+
+            Divider()
+
             Toggle("Enabled", isOn: Binding(
                 get: { settings.isEnabled },
                 set: { newValue in
@@ -173,6 +206,10 @@ struct PreferencesView: View {
                     onSettingsChanged?()
                 }
             ))
+            .disabled(!controller.isAccessibilityPermissionGranted)
+            .help(controller.isAccessibilityPermissionGranted
+                ? "Process keystrokes and play sounds"
+                : "Enable Accessibility permission first")
 
             Divider()
 
@@ -184,28 +221,6 @@ struct PreferencesView: View {
                 }
             ))
             .help("Automatically start KeyPulse when you log in")
-
-            Divider()
-
-            Section("Accessibility Permission") {
-                HStack {
-                    Image(systemName: controller.isAccessibilityPermissionGranted
-                        ? "checkmark.circle.fill"
-                        : "exclamationmark.triangle.fill")
-                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .green : .red)
-                    Text(controller.isAccessibilityPermissionGranted
-                        ? "Granted"
-                        : "Not Granted")
-                        .foregroundColor(controller.isAccessibilityPermissionGranted ? .secondary : .primary)
-                }
-
-                if !controller.isAccessibilityPermissionGranted {
-                    Button("Grant Permission") {
-                        KeyboardMonitor.requestAccessibilityPermission()
-                    }
-                    .help("Open system prompt to enable Accessibility access for keyboard monitoring")
-                }
-            }
         }
         .padding()
     }

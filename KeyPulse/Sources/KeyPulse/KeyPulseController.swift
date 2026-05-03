@@ -180,6 +180,14 @@ final class KeyPulseController: ObservableObject {
             guard let self = self else { return }
             self.updateModifierFlags(flags)
         }
+
+        // Wire unexpected monitoring stop (e.g., permission revocation) to update state
+        keyboardMonitor.onMonitoringStopped = { [weak self] in
+            guard let self = self else { return }
+            if self.isAccessibilityPermissionGranted {
+                self.isAccessibilityPermissionGranted = false
+            }
+        }
     }
 
     /// Updates the modifier flags in diagnostics data.
