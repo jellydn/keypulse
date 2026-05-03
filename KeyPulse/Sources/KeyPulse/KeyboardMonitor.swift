@@ -36,6 +36,9 @@ final class KeyboardMonitor {
     /// Whether the monitor is currently active.
     private(set) var isMonitoring = false
 
+    /// Observer token for system sleep/wake notifications.
+    private var wakeObserver: NSObjectProtocol?
+
     /// Tracks the last modifier flags state to detect actual changes (not repeated events).
     /// Used for debouncing flagsChanged events so each modifier press fires once.
     private var lastModifierFlags: CGEventFlags = []
@@ -93,8 +96,21 @@ final class KeyboardMonitor {
         }
 
         // Create the event tap
-        // We use kCGEventTapOptionListenOnly to avoid intercepting events (we only observe)
-        // Include both keyDown and flagsChanged to capture regular keys AND modifier-only presses
+        guard createEventTap() else {
+            print("KeyboardMonitor: Failed to create event tap")
+            return false
+        }
+
+        // Register for system wake notifications to restart tap after sleep
+        registerWakeObserver()
+
+        isMonitoring = true
+        print("KeyboardMonitor: Started monitoring keyboard events")
+        return true
+    }
+
+    /// Creates and registers the CGEventTap. Extracted so it can be called on wake.
+    private func createEventTap() -> Bool {
         let eventMask = CGEventMask(
             (1 << CGEventType.keyDown.rawValue) |
             (1 << CGEventType.flagsChanged.rawValue)
@@ -105,7 +121,6 @@ final class KeyboardMonitor {
             options: .listenOnly,
             eventsOfInterest: eventMask,
             callback: { proxy, type, event, refcon in
-                // Cast refcon back to KeyboardMonitor instance
                 guard let refcon = refcon else {
                     return Unmanaged.passUnretained(event)
                 }
@@ -114,48 +129,84 @@ final class KeyboardMonitor {
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
-            print("KeyboardMonitor: Failed to create event tap")
             return false
         }
 
         self.eventTap = tap
 
-        // Create run loop source
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         self.runLoopSource = source
 
-        // Add to run loop and enable
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
 
-        isMonitoring = true
-        print("KeyboardMonitor: Started monitoring keyboard events")
         return true
+    }
+
+    /// Registers for system wake notifications to restart the event tap.
+    /// CGEventTaps are torn down during system sleep and must be re-created on wake.
+    private func registerWakeObserver() {
+        // Remove any existing observer first
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, self.isMonitoring else { return }
+
+            print("KeyboardMonitor: System woke from sleep — restarting event tap")
+
+            // Tear down the old (now-invalid) tap
+            self.tearDownEventTap()
+
+            // Re-create the tap
+            if self.createEventTap() {
+                print("KeyboardMonitor: Event tap restarted after wake")
+            } else {
+                print("KeyboardMonitor: Failed to restart event tap after wake")
+                self.isMonitoring = false
+            }
+        }
     }
 
     /// Stops monitoring keyboard events.
     func stop() {
         guard isMonitoring else { return }
 
-        // Disable and clean up event tap
+        // Remove wake observer
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
+
+        // Tear down the event tap
+        tearDownEventTap()
+
+        isMonitoring = false
+        print("KeyboardMonitor: Stopped monitoring keyboard events")
+    }
+
+    /// Tears down the event tap (disable, remove from run loop, invalidate).
+    /// Safe to call multiple times; used both for normal stop and sleep/wake restart.
+    private func tearDownEventTap() {
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
         }
 
-        // Remove from run loop
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
 
-        // Invalidate the tap
         if let tap = eventTap {
             CFMachPortInvalidate(tap)
         }
 
         runLoopSource = nil
         eventTap = nil
-        isMonitoring = false
-        print("KeyboardMonitor: Stopped monitoring keyboard events")
     }
 
     // MARK: - Event Handling
