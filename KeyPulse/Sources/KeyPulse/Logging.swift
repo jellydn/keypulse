@@ -33,4 +33,7 @@ extension Logger {
 
     /// Menu bar UI actions (profile change, volume, mute).
     static let menuBarManager = Logger(subsystem: subsystem, category: "MenuBarManager")
+
+    /// Sound asset loading and validation.
+    static let soundAssets = Logger(subsystem: subsystem, category: "SoundAssets")
 }

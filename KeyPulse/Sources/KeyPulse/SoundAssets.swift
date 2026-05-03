@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 /// Represents the three mechanical keyboard sound profiles.
 enum SoundProfile: String, CaseIterable, Identifiable {
@@ -29,15 +30,23 @@ enum SoundAssets {
     static let samplesPerProfile = 4
 
     /// Returns the URLs for all samples in the specified profile.
+    /// Logs a warning for any missing files so missing resources are not silently dropped.
     /// - Parameter profile: The sound profile to load samples for.
     /// - Returns: Array of URLs pointing to the sound files in the bundle.
     static func sampleURLs(for profile: SoundProfile) -> [URL] {
         let prefix = profile.filenamePrefix
+        var urls: [URL] = []
 
-        return (1...samplesPerProfile).compactMap { index in
+        for index in 1...samplesPerProfile {
             let filename = "\(prefix)_key_\(String(format: "%02d", index))"
-            return Bundle.module.url(forResource: filename, withExtension: "wav")
+            if let url = Bundle.module.url(forResource: filename, withExtension: "wav") {
+                urls.append(url)
+            } else {
+                Logger.soundAssets.warning("Missing sample: \(filename).wav for profile \(profile.rawValue)")
+            }
         }
+
+        return urls
     }
 
     /// Returns a single sample URL by index for the specified profile.
