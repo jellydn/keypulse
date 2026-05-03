@@ -255,6 +255,12 @@ final class MenuBarManager {
             onProfileChanged?(profile)
         } catch {
             Logger.menuBarManager.error("Failed to change profile: \(error.localizedDescription)")
+            // Revert checkmarks to match actual (unchanged) engine state
+            for (p, item) in profileMenuItems {
+                item.state = (p == controller.currentProfile) ? .on : .off
+            }
+            // Propagate error to app delegate for user-facing alert
+            controller.onError?(error)
         }
     }
 

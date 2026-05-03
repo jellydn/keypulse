@@ -47,7 +47,12 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
         let debugView = DebugView(
             diagnostics: controller?.diagnosticsData ?? DiagnosticsData(),
             onProfileChanged: { [weak self] profile in
-                try? self?.controller?.setProfile(profile)
+                guard let controller = self?.controller else { return }
+                do {
+                    try controller.setProfile(profile)
+                } catch {
+                    controller.onError?(error)
+                }
             },
             onTestSound: { [weak self] in
                 self?.controller?.testPlay()
@@ -109,7 +114,12 @@ final class DebugWindowController: NSObject, NSWindowDelegate {
         let debugView = DebugView(
             diagnostics: diagnostics,
             onProfileChanged: { [weak self] profile in
-                try? self?.controller?.setProfile(profile)
+                guard let controller = self?.controller else { return }
+                do {
+                    try controller.setProfile(profile)
+                } catch {
+                    controller.onError?(error)
+                }
             },
             onTestSound: { [weak self] in
                 self?.controller?.testPlay()

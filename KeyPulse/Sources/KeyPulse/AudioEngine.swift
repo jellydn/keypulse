@@ -209,7 +209,11 @@ final class AudioEngine {
     /// - Parameter url: URL to the WAV file.
     /// - Returns: The loaded buffer in common format, or nil if loading fails.
     private func loadAndConvertBuffer(from url: URL) -> AVAudioPCMBuffer? {
-        guard let file = try? AVAudioFile(forReading: url) else {
+        let file: AVAudioFile
+        do {
+            file = try AVAudioFile(forReading: url)
+        } catch {
+            Logger.audioEngine.error("Failed to open audio file \(url.lastPathComponent): \(error.localizedDescription)")
             return nil
         }
 
