@@ -43,5 +43,9 @@ final class KeystrokeDispatchLoadTest: XCTestCase {
         print("INFO: Average dispatch latency: \(String(format: "%.3f", avgLatency)) ms")
         print("INFO: Max dispatch latency: \(String(format: "%.3f", maxLatency)) ms")
         print("INFO: Total keystrokes: \(latencies.count)")
+
+        // Regression guard: keystroke dispatch under 10ms (baseline ~0.04ms)
+        XCTAssertLessThan(avgLatency, 10.0, "Keystroke dispatch latency under 10ms")
+        XCTAssertEqual(latencies.count, totalKeystrokes)
     }
 }

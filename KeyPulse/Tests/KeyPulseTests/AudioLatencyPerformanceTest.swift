@@ -39,5 +39,10 @@ final class AudioLatencyPerformanceTest: XCTestCase {
         print("INFO: Max latency: \(String(format: "%.3f", maxLatencyMs)) ms")
         print("INFO: Min latency: \(String(format: "%.3f", minLatencyMs)) ms")
         print("INFO: Samples collected: \(engine.latencyMeasurementCount)")
+
+        // Regression guard: latency must stay under generous threshold (target <20ms)
+        XCTAssertLessThan(avgLatencyMs, 50.0, "Average latency must be under 50ms")
+        XCTAssertLessThan(maxLatencyMs, 200.0, "Max latency must be under 200ms")
+        XCTAssertEqual(engine.latencyMeasurementCount, playCount)
     }
 }

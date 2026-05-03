@@ -32,5 +32,9 @@ final class EngineStartupPerformanceTest: XCTestCase {
         print("INFO: Max startup time: \(String(format: "%.3f", maxTime)) ms")
         print("INFO: Min startup time: \(String(format: "%.3f", minTime)) ms")
         print("INFO: Player node count: 8 (current)")
+
+        // Regression guard: startup must stay under 500ms (baseline ~27ms)
+        XCTAssertLessThan(avgTime, 500.0, "Engine startup must be under 500ms")
+        XCTAssertLessThan(maxTime, 2000.0, "Max startup must be under 2000ms")
     }
 }

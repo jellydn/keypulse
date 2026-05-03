@@ -30,5 +30,10 @@ final class PitchRandomizationPerformanceTest: XCTestCase {
         // Verify randomness quality (basic check)
         let avgRate = rates.reduce(0, +) / Float(rates.count)
         print("INFO: Average rate value: \(avgRate) (expected ~1.0)")
+
+        // Regression guard: randomization under 100µs (baseline ~0.36µs)
+        XCTAssertLessThan(avgMicroseconds, 100.0, "Pitch randomization under 100µs")
+        XCTAssertGreaterThan(avgRate, 0.94)
+        XCTAssertLessThan(avgRate, 1.06)
     }
 }

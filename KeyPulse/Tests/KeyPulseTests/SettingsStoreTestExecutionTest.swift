@@ -50,5 +50,9 @@ final class SettingsStoreTestExecutionTest: XCTestCase {
         print("INFO: Max execution time: \(String(format: "%.3f", maxTime)) ms")
         print("INFO: Min execution time: \(String(format: "%.3f", minTime)) ms")
         print("INFO: Iterations: \(executionTimes.count)")
+
+        // Regression guard: test execution under 10ms (baseline ~0.43ms)
+        XCTAssertLessThan(avgTime, 10.0, "SettingsStore test execution under 10ms")
+        XCTAssertLessThan(maxTime, 50.0, "Max test execution under 50ms")
     }
 }

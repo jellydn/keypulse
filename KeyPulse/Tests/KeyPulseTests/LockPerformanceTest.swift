@@ -11,16 +11,16 @@ final class LockPerformanceTest: XCTestCase {
         let engine = AudioEngine()
         let iterations = 1_000_000
 
-        // Measure just the lock acquisition and index increment portion
-        // This simulates what happens in AudioEngine.play() but without audio playback
+        // Create the lock once (like AudioEngine does) — the original test
+        // incorrectly created a new lock inside the loop, measuring stack allocation
+        // instead of actual lock acquisition overhead.
+        var playerLock = os_unfair_lock()
+        var nextPlayerIndex = 0
+        let concurrentPlayerCount = 8
+
         let start = CFAbsoluteTimeGetCurrent()
 
         for _ in 0..<iterations {
-            // This mirrors the actual lock usage in AudioEngine.play()
-            var playerLock = os_unfair_lock()
-            var nextPlayerIndex = 0
-            let concurrentPlayerCount = 8
-
             os_unfair_lock_lock(&playerLock)
             let _ = nextPlayerIndex
             nextPlayerIndex = (nextPlayerIndex + 1) % concurrentPlayerCount
@@ -43,5 +43,8 @@ final class LockPerformanceTest: XCTestCase {
         // Output metric
         print("METRIC lock_acquire_µs=\(String(format: "%.4f", avg))")
         print("INFO: os_unfair_lock avg: \(String(format: "%.4f", avg)) µs per acquire")
+
+        // Regression guard: lock acquisition under 10µs (baseline ~0.1µs)
+        XCTAssertLessThan(avg, 10.0, "Lock acquisition under 10µs")
     }
 }

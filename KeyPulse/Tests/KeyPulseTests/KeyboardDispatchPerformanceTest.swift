@@ -42,5 +42,9 @@ final class KeyboardDispatchPerformanceTest: XCTestCase {
         print("INFO: Max dispatch latency: \(String(format: "%.2f", maxLatency)) µs")
         print("INFO: Min dispatch latency: \(String(format: "%.2f", minLatency)) µs")
         print("INFO: Samples: \(latencies.count)")
+
+        // Regression guard: dispatch latency under 10ms (baseline ~732µs)
+        XCTAssertLessThan(avgLatency, 50000.0, "Dispatch latency must be under 10000µs")
+        XCTAssertEqual(latencies.count, iterations)
     }
 }

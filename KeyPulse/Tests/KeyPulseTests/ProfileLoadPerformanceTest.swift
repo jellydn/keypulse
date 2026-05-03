@@ -35,5 +35,9 @@ final class ProfileLoadPerformanceTest: XCTestCase {
         print("METRIC profile_load_ms=\(String(format: "%.3f", avgMs))")
         print("INFO: Average profile load time: \(String(format: "%.3f", avgMs)) ms")
         print("INFO: Total iterations: \(iterationCount)")
+
+        // Regression guard: profile load under 10ms (baseline ~0.46ms)
+        XCTAssertLessThan(avgMs, 10.0, "Profile load under 10ms")
+        XCTAssertEqual(iterationCount, 15)
     }
 }

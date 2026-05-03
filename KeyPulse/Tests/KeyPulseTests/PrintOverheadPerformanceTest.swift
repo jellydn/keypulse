@@ -32,5 +32,8 @@ final class PrintOverheadPerformanceTest: XCTestCase {
         print("INFO: Total with print: \(String(format: ".2f", withPrintMicroseconds)) µs")
         print("INFO: Total without print: \(String(format: ".2f", noPrintMicroseconds)) µs")
         print("INFO: Print overhead: \(String(format: ".2f", printOverhead)) µs total")
+
+        // Regression guard: print overhead under 100µs (baseline ~0.53µs)
+        XCTAssertLessThan(avgPerCall, 100.0, "Print overhead under 100µs per call")
     }
 }

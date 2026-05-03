@@ -38,5 +38,10 @@ final class ProfileSwitchPerformanceTest: XCTestCase {
         print("INFO: Max profile switch time: \(String(format: "%.3f", maxTime)) ms")
         print("INFO: Min profile switch time: \(String(format: "%.3f", minTime)) ms")
         print("INFO: Pre-warmed: \(engine.isPreWarmed)")
+
+        // Regression guard: cached switch near-instant (baseline ~0ms)
+        XCTAssertLessThan(avgTime, 5.0, "Profile switch under 5ms")
+        XCTAssertLessThan(maxTime, 10.0, "Max switch under 10ms")
+        XCTAssertTrue(engine.isPreWarmed)
     }
 }

@@ -35,6 +35,9 @@ final class BufferConversionPerformanceTest: XCTestCase {
         let avgPerSample = avgMicroseconds / 4.0
 
         print("METRIC buffer_convert_µs=\(String(format: "%.2f", avgPerSample))")
+
+        // Regression guard: buffer load+convert under 1ms (baseline ~99µs)
+        XCTAssertLessThan(avgPerSample, 1000.0, "Buffer load+convert must be under 1000µs")
         print("INFO: Average per-sample load (includes conversion): \(String(format: "%.2f", avgPerSample)) µs")
         print("INFO: Average per-profile load (4 samples): \(String(format: "%.2f", avgMicroseconds)) µs")
         print("INFO: Total for \(totalProfiles) profile loads: \(String(format: "%.2f", (end - start) * 1_000_000)) µs")

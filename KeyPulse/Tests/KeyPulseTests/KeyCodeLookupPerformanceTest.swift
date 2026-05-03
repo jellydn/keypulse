@@ -34,6 +34,9 @@ final class KeyCodeLookupPerformanceTest: XCTestCase {
         let avgNs = ((end - start) * 1_000_000_000) / Double(totalCalls)
 
         print("METRIC keycode_lookup_ns=\(String(format: "%.1f", avgNs))")
+
+        // Regression guard: key code lookup under 1µs (baseline ~73ns)
+        XCTAssertLessThan(avgNs, 1000.0, "Key code lookup must be under 1000ns")
         print("INFO: Switch-based lookup: \(String(format: "%.1f", avgNs)) ns per call")
         print("INFO: Total for \(totalCalls) lookups: \(String(format: "%.2f", (end - start) * 1_000_000)) µs")
         print("INFO: At 60 keystrokes/sec with 20 Hz throttle: ~\(String(format: "%.2f", avgNs * 20 / 1000)) µs/sec")
