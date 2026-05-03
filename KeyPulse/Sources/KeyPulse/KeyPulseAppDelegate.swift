@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import os.log
 
 class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {

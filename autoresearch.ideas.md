@@ -41,10 +41,16 @@
 4. ✅ **Error propagation to UI** — All `try?` replaced with `do-catch` + `onError` propagation
 5. ✅ **SoundAssets validation** — Missing WAV files now logged with `.warning`
 6. ✅ **MenuBarManager tests** — 20 tests added (was zero coverage)
+7. ✅ **SettingsStore test isolation** — Injectable UserDefaults for parallel-safe tests
+8. ✅ **AVAudioEngineConfigurationChange observer** — Audio route resilience
+9. ✅ **Performance test assertions** — All 13 files now have regression guards
+10. ✅ **DebugWindowController refactor** — @ObservedObject replaces manual view recreation
 
-### Low Priority
-7. **Carbon framework deprecation** - Replace with hardcoded key codes
-8. **Settings schema versioning** - Add migration path for future settings changes
+## All Reviewer Findings Resolved ✅
+
+### Low Priority (deferred)
+- **Carbon framework deprecation** - Replace with hardcoded key codes
+- **Settings schema versioning** - Add migration path for future settings changes
 
 ## Key Learnings
 

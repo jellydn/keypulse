@@ -1,6 +1,5 @@
 import Foundation
 import CoreGraphics
-import Carbon
 import AppKit
 import os.log
 
@@ -22,7 +21,7 @@ import os.log
 /// - Some secure input fields (password dialogs) may suppress events, which is acceptable behavior
 final class KeyboardMonitor {
     /// Callback type for key-down events.
-    /// - Parameter keyCode: The virtual key code (Carbon key code, e.g., kVK_Space = 49)
+    /// - Parameter keyCode: The virtual key code (e.g., Space = 49).
     typealias KeyDownHandler = (_ keyCode: UInt16) -> Void
 
     /// Called whenever a key-down event is detected.
@@ -231,7 +230,7 @@ final class KeyboardMonitor {
     /// Handles a key-down event (regular keystrokes).
     private func handleKeyDownEvent(_ event: CGEvent) {
         // Extract the key code from the event
-        // CGEvent key codes match Carbon virtual key codes
+        // CGEvent key codes match virtual key codes
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
 
         // Call the handler on the main thread
