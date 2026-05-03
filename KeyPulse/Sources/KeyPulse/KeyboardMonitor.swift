@@ -103,6 +103,15 @@ final class KeyboardMonitor {
         NSWorkspace.shared.open(url)
     }
 
+    /// Re-checks accessibility permission and restarts monitoring if newly granted.
+    /// Call this when the user returns from System Settings.
+    /// - Returns: True if permission is now granted and monitoring is active.
+    func recheckPermissionAndRestart() -> Bool {
+        guard !isMonitoring else { return true }
+        guard Self.checkAccessibilityPermission() else { return false }
+        return start()
+    }
+
     // MARK: - Monitoring Control
 
     /// Starts monitoring keyboard events.

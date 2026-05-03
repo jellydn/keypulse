@@ -25,6 +25,7 @@ final class MenuBarManager {
     private var cachedIconEnabledUnmuted: NSImage?
     private var cachedIconDisabled: NSImage?
     private var cachedIconMuted: NSImage?
+    private var cachedIconNoPermission: NSImage?
 
     /// The main menu (shown on left-click)
     private var mainMenu: NSMenu?
@@ -57,8 +58,10 @@ final class MenuBarManager {
     /// - Parameters:
     ///   - enabled: Whether KeyPulse is processing keystrokes.
     ///   - muted: Whether audio is muted.
+    ///   - permissionGranted: Whether accessibility permission is granted.
     /// - Returns: The SF Symbol name string.
-    static func iconSymbolName(enabled: Bool, muted: Bool) -> String {
+    static func iconSymbolName(enabled: Bool, muted: Bool, permissionGranted: Bool) -> String {
+        guard permissionGranted else { return "keyboard" }
         switch (enabled, muted) {
         case (true, false): return "keyboard.fill"
         case (false, _): return "keyboard"
@@ -267,6 +270,35 @@ final class MenuBarManager {
 
         let isEnabled = controller.isEnabled
         let isMuted = controller.isMuted
+        let hasPermission = controller.isAccessibilityPermissionGranted
+
+        // No permission: keyboard outline with exclamationmark overlay
+        guard hasPermission else {
+            if let cached = cachedIconNoPermission { return cached }
+            let size = NSSize(width: 18, height: 18)
+            let image = NSImage(size: size, flipped: false) { rect in
+                guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+                if let keyboardImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: nil) {
+                    ctx.saveGState()
+                    keyboardImage.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+                    ctx.restoreGState()
+                }
+                let overlaySize = NSSize(width: 9, height: 9)
+                let overlayRect = NSRect(
+                    x: rect.maxX - overlaySize.width + 1,
+                    y: rect.minY + 1,
+                    width: overlaySize.width,
+                    height: overlaySize.height
+                )
+                if let exclaimImage = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil) {
+                    exclaimImage.draw(in: overlayRect, from: .zero, operation: .sourceOver, fraction: 0.9)
+                }
+                return true
+            }
+            image.isTemplate = true
+            cachedIconNoPermission = image
+            return image
+        }
 
         if isMuted {
             // Return cached muted icon
@@ -325,6 +357,7 @@ final class MenuBarManager {
         cachedIconEnabledUnmuted = nil
         cachedIconDisabled = nil
         cachedIconMuted = nil
+        cachedIconNoPermission = nil
     }
 
     // MARK: - State Sync
@@ -379,7 +412,8 @@ final class MenuBarManager {
         let volume = controller.volume
         let muteStatus = controller.isMuted ? "muted" : "active"
         let enabledStatus = controller.isEnabled ? "enabled" : "disabled"
-        statusItem?.button?.setAccessibilityLabel("KeyPulse - \(profileName) profile, \(volume)% volume, \(muteStatus), \(enabledStatus)")
+        let permissionStatus = controller.isAccessibilityPermissionGranted ? "permission granted" : "permission required"
+        statusItem?.button?.setAccessibilityLabel("KeyPulse - \(profileName) profile, \(volume)% volume, \(muteStatus), \(enabledStatus), \(permissionStatus)")
     }
 
     /// Updates the header menu item with the current controller state.
@@ -391,13 +425,14 @@ final class MenuBarManager {
         let volume = controller.volume
         let muteText = controller.isMuted ? "Muted" : "Active"
         let enabledText = controller.isEnabled ? "" : " — Disabled"
+        let permissionText = controller.isAccessibilityPermissionGranted ? "" : " — No Permission"
 
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
 
         // Primary line: "KeyPulse - <Profile>"
         let primary = NSAttributedString(
-            string: "KeyPulse — \(profileName)\(enabledText)",
+            string: "KeyPulse — \(profileName)\(enabledText)\(permissionText)",
             attributes: [
                 .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
                 .paragraphStyle: paragraphStyle

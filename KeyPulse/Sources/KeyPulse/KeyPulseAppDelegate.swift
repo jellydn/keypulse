@@ -24,6 +24,17 @@ class KeyPulseAppDelegate: NSObject, NSApplicationDelegate {
         registerNotificationObservers()
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard let controller = controller else { return }
+        if !controller.isAccessibilityPermissionGranted {
+            let granted = controller.recheckAccessibilityPermission()
+            if granted {
+                Logger.appDelegate.info("Accessibility permission granted — monitoring resumed")
+                menuBarManager?.refresh()
+            }
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         // Save settings before quitting
         saveSettings()

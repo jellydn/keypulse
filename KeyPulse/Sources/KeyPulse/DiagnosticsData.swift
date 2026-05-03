@@ -51,6 +51,9 @@ struct DiagnosticsData {
     /// When true, keystroke sounds are suppressed to protect user privacy.
     var isSecureInputDetected: Bool = false
 
+    /// Whether accessibility permission is granted for keyboard monitoring.
+    var isAccessibilityPermissionGranted: Bool = false
+
     /// App and system info (read dynamically from Bundle.main)
     var bundleIdentifier: String = DiagnosticsData.bundleString(kCFBundleIdentifierKey as String, fallback: "com.keypulse.app")
     var appVersion: String = DiagnosticsData.bundleString("CFBundleShortVersionString", fallback: "0.1.0")
@@ -90,6 +93,7 @@ struct DiagnosticsData {
         - Muted: \(isMuted ? "Yes" : "No")
         - Pitch Variation: \(isPitchVariationEnabled ? "On" : "Off")
         - Secure Input: \(isSecureInputDetected ? "Yes (sounds suppressed)" : "No")
+        - Accessibility Permission: \(isAccessibilityPermissionGranted ? "Granted" : "Not Granted")
         - Enabled: \(isEnabled ? "Yes" : "No")
 
         Modifier Flags:
@@ -127,6 +131,7 @@ extension DiagnosticsData: Equatable {
         lhs.isMuted == rhs.isMuted &&
         lhs.isPitchVariationEnabled == rhs.isPitchVariationEnabled &&
         lhs.isSecureInputDetected == rhs.isSecureInputDetected &&
+        lhs.isAccessibilityPermissionGranted == rhs.isAccessibilityPermissionGranted &&
         lhs.bundleIdentifier == rhs.bundleIdentifier &&
         lhs.appVersion == rhs.appVersion &&
         lhs.buildNumber == rhs.buildNumber &&

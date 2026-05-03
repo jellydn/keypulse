@@ -18,6 +18,9 @@ final class KeyPulseController: ObservableObject {
     /// Whether the controller is enabled (processing keystrokes).
     @Published var isEnabled: Bool = true
 
+    /// Whether accessibility permission is granted for keyboard monitoring.
+    @Published private(set) var isAccessibilityPermissionGranted = false
+
     /// Error handler for runtime issues.
     var onError: ((Error) -> Void)?
 
@@ -76,12 +79,25 @@ final class KeyPulseController: ObservableObject {
     /// - Returns: True if monitoring started successfully, false if accessibility permission is missing.
     @discardableResult
     func start() -> Bool {
-        return keyboardMonitor.start()
+        let started = keyboardMonitor.start()
+        isAccessibilityPermissionGranted = started
+        return started
     }
 
     /// Stops monitoring keyboard events.
     func stop() {
         keyboardMonitor.stop()
+    }
+
+    /// Re-checks accessibility permission and restarts monitoring if newly granted.
+    /// - Returns: True if permission is now granted and monitoring is active.
+    @discardableResult
+    func recheckAccessibilityPermission() -> Bool {
+        let granted = keyboardMonitor.recheckPermissionAndRestart()
+        if granted != isAccessibilityPermissionGranted {
+            isAccessibilityPermissionGranted = granted
+        }
+        return granted
     }
 
     /// Changes the current sound profile.
@@ -193,6 +209,7 @@ final class KeyPulseController: ObservableObject {
 
         // Security state
         diagnosticsData.isSecureInputDetected = keyboardMonitor.isSecureInputDetected
+        diagnosticsData.isAccessibilityPermissionGranted = isAccessibilityPermissionGranted
 
         // Settings state
         diagnosticsData.volumePercent = volume

@@ -184,27 +184,35 @@ final class KeyPulseTests: XCTestCase {
     // MARK: - MenuBarManager Tests
 
     func testMenuBarManagerIconSymbolName_enabledUnmuted() {
-        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false)
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false, permissionGranted: true)
         XCTAssertEqual(name, "keyboard.fill", "Enabled + unmuted should use keyboard.fill")
     }
 
     func testMenuBarManagerIconSymbolName_enabledMuted() {
-        let name = MenuBarManager.iconSymbolName(enabled: true, muted: true)
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: true, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Enabled + muted should use keyboard outline with overlay")
     }
 
     func testMenuBarManagerIconSymbolName_disabled() {
-        let name = MenuBarManager.iconSymbolName(enabled: false, muted: false)
+        let name = MenuBarManager.iconSymbolName(enabled: false, muted: false, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Disabled should use keyboard outline")
 
-        let nameMuted = MenuBarManager.iconSymbolName(enabled: false, muted: true)
+        let nameMuted = MenuBarManager.iconSymbolName(enabled: false, muted: true, permissionGranted: true)
         XCTAssertEqual(nameMuted, "keyboard", "Disabled + muted should still use keyboard outline")
     }
 
     func testMenuBarManagerIconSymbolName_disabledTakesPrecedence() {
         // When disabled, the icon should always be the outline regardless of mute state
-        let name = MenuBarManager.iconSymbolName(enabled: false, muted: true)
+        let name = MenuBarManager.iconSymbolName(enabled: false, muted: true, permissionGranted: true)
         XCTAssertEqual(name, "keyboard", "Disabled state takes precedence over mute")
+    }
+
+    func testMenuBarManagerIconSymbolName_noPermission() {
+        let name = MenuBarManager.iconSymbolName(enabled: true, muted: false, permissionGranted: false)
+        XCTAssertEqual(name, "keyboard", "No permission should use keyboard outline regardless of state")
+
+        let nameDisabled = MenuBarManager.iconSymbolName(enabled: false, muted: false, permissionGranted: false)
+        XCTAssertEqual(nameDisabled, "keyboard", "No permission + disabled should still use keyboard outline")
     }
 }
         }
