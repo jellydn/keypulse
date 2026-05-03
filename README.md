@@ -59,6 +59,7 @@ just bundle
 
 | Shortcut    | Action                           |
 | ----------- | -------------------------------- |
+| `Cmd+,`     | Open Preferences                 |
 | `Cmd+Opt+D` | Toggle Debug Window              |
 | —           | Click menu bar icon for settings |
 
@@ -74,6 +75,18 @@ The Debug Window provides real-time diagnostics for testing and verification:
 - **Actions**: Test Sound, Test All Profiles, Reset Stats, Copy Diagnostics
 
 ![Debug Window](docs/debug-window-screenshot.png)
+
+### Preferences Window
+
+The Preferences window (`Cmd+,`) provides a full GUI for configuring KeyPulse settings in a comfortable tabbed interface:
+
+- **General**: `Enabled` toggle and `Launch at Login` toggle
+- **Sounds**: Profile picker (Linear / Tactile / Clicky segmented control), volume slider with percentage label, `Mute` and `Pitch Variation` toggles, and a `Test Sound` button
+- **Advanced**: `Show Debug Window` button, `Reset All Settings` button (with confirmation alert), and version label
+
+All controls stay in sync with the menu bar — changing a setting in Preferences immediately updates the menu bar checkbox/indicator, and vice versa. Settings persist automatically through UserDefaults.
+
+![Preferences Window](docs/preferences-screenshot.png)
 
 ## 🛠️ Development
 
@@ -105,16 +118,19 @@ just
 ```
 KeyPulse/
 ├── Sources/KeyPulse/
-│   ├── KeyPulse.swift           # App entry point
-│   ├── KeyPulseAppDelegate.swift# App lifecycle
-│   ├── KeyPulseController.swift # Main controller
-│   ├── AudioEngine.swift        # Low-latency audio
-│   ├── KeyboardMonitor.swift    # CGEventTap hook
-│   ├── MenuBarManager.swift      # Menu bar UI
-│   ├── SettingsStore.swift       # UserDefaults persistence
-│   └── SoundAssets.swift        # Sound profile definitions
-├── Resources/Sounds/            # WAV assets (linear/tactile/clicky)
-└── Tests/KeyPulseTests/         # Unit tests
+│   ├── KeyPulse.swift                # App entry point
+│   ├── KeyPulseAppDelegate.swift     # App lifecycle
+│   ├── KeyPulseController.swift      # Main controller
+│   ├── AudioEngine.swift             # Low-latency audio
+│   ├── KeyboardMonitor.swift         # CGEventTap hook
+│   ├── MenuBarManager.swift          # Menu bar UI
+│   ├── SettingsStore.swift           # UserDefaults persistence
+│   ├── SoundAssets.swift             # Sound profile definitions
+│   ├── DebugWindowController.swift   # Debug window (SwiftUI)
+│   ├── PreferencesWindowController.swift # Preferences window (SwiftUI)
+│   └── DiagnosticsData.swift         # Diagnostics struct
+├── Resources/Sounds/                 # WAV assets (linear/tactile/clicky)
+└── Tests/KeyPulseTests/              # Unit tests
 ```
 
 ### Tech Stack
